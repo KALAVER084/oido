@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
     // ---------- Karaoke ----------
     private val gestorPantallas by lazy { getSystemService(DisplayManager::class.java) }
     private var tv: KaraokeTv? = null
+    private var karaokeLocal: VistaKaraoke? = null   // karaoke encima de la app (teléfono girado)
     private var letraAbierta = false
 
     private val oyentePantallas = object : DisplayManager.DisplayListener {
@@ -263,6 +264,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        karaokeLocal?.destruir()
+        karaokeLocal = null
         paginaLista = false
         web.destroy()
         trabajo.shutdown()
@@ -463,9 +466,26 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        /** Karaoke en la tele: canción, letra o posición. */
+        /** Karaoke: canción, letra o posición, para la tele y para el karaoke del teléfono. */
         @JavascriptInterface fun karaoke(json: String) {
-            main.post { tv?.enviar(json) }
+            main.post {
+                tv?.enviar(json)
+                karaokeLocal?.enviar(json)
+            }
+        }
+
+        /** Teléfono girado con la letra abierta: muestra u oculta el karaoke encima de la app. */
+        @JavascriptInterface fun karaokeLocal(activo: Boolean) {
+            main.post {
+                if (activo && karaokeLocal == null) {
+                    val v = VistaKaraoke(this@MainActivity) { js("window.__karaokeListo && window.__karaokeListo()") }
+                    marco.addView(v.web, FrameLayout.LayoutParams(-1, -1))
+                    karaokeLocal = v
+                } else if (!activo) {
+                    karaokeLocal?.let { marco.removeView(it.web); it.destruir() }
+                    karaokeLocal = null
+                }
+            }
         }
 
         /**
