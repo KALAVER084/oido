@@ -1,0 +1,10 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+
+# La llave de firma vive en los Secrets de GitHub, nunca en el código
+*.keystore
+*.jks

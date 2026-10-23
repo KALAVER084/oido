@@ -1,0 +1,78 @@
+name: Revisar actualizaciones
+
+# Cada día revisa si NewPipe Extractor (lo que habla con YouTube) tiene versión nueva.
+# Si la hay: compila con ella y, solo si compila bien, la guarda y publica el APK.
+# Si no compila, no cambia nada y GitHub te avisa por correo del fallo.
+on:
+  schedule:
+    - cron: "0 12 * * *"   # todos los días 12:00 UTC (6:00 en Honduras)
+  workflow_dispatch:        # también se puede lanzar a mano desde Actions
+
+permissions:
+  contents: write
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buscar versión nueva de NewPipe Extractor
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ultima=$(gh api repos/TeamNewPipe/NewPipeExtractor/releases/latest --jq .tag_name)
+          actual=$(sed -n 's/^val versionExtractor = "\(.*\)"/\1/p' app/build.gradle.kts)
+          echo "Usada: $actual — Más nueva: $ultima"
+          if [ -z "$ultima" ] || [ "$ultima" = "$actual" ]; then
+            echo "Ya está al día."
+            echo "nueva=no" >> "$GITHUB_OUTPUT"
+          else
+            sed -i "s/^val versionExtractor = \".*\"/val versionExtractor = \"$ultima\"/" app/build.gradle.kts
+            echo "nueva=si" >> "$GITHUB_OUTPUT"
+            echo "version=$ultima" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.v.outputs.nueva == 'si'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - if: steps.v.outputs.nueva == 'si'
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - if: steps.v.outputs.nueva == 'si'
+        name: Preparar la firma (desde Secrets)
+        env:
+          OIDO_KEYSTORE: ${{ secrets.OIDO_KEYSTORE }}
+        run: echo "$OIDO_KEYSTORE" | base64 -d > app/oido.keystore
+
+      - name: Compilar con la versión nueva
+        if: steps.v.outputs.nueva == 'si'
+        env:
+          OIDO_KEY_PASSWORD: ${{ secrets.OIDO_KEY_PASSWORD }}
+        run: |
+          echo "OIDO_VERSION=$(date -u +%Y.%m.%d-%H%M)" >> "$GITHUB_ENV"
+          gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Guardar el cambio
+        if: steps.v.outputs.nueva == 'si'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Actualizar NewPipe Extractor a ${{ steps.v.outputs.version }}"
+          git push
+          cp app/build/outputs/apk/release/app-release.apk "Oido-$OIDO_VERSION.apk"
+
+      - name: Publicar APK
+        if: steps.v.outputs.nueva == 'si'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.OIDO_VERSION }}
+          name: Oído ${{ env.OIDO_VERSION }}
+          body: "Actualización automática: NewPipe Extractor ${{ steps.v.outputs.version }}"
+          files: Oido-${{ env.OIDO_VERSION }}.apk

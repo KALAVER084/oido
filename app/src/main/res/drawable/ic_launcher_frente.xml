@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo de Oído: un punto y dos ondas de sonido -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#53EADD"
+        android:pathData="M34.5,54a7.5,7.5 0,1 1,15 0a7.5,7.5 0,1 1,-15 0z" />
+    <path android:strokeColor="#53EADD" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M54.4,41A18,18 0,0 1,54.4 67" />
+    <path android:strokeColor="#53EADD" android:strokeWidth="7" android:strokeLineCap="round"
+        android:pathData="M64.2,31A32,32 0,0 1,64.2 77" />
+</vector>

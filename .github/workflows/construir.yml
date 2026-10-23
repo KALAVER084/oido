@@ -1,0 +1,46 @@
+name: Construir APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Preparar la firma (desde Secrets)
+        env:
+          OIDO_KEYSTORE: ${{ secrets.OIDO_KEYSTORE }}
+        run: echo "$OIDO_KEYSTORE" | base64 -d > app/oido.keystore
+
+      - name: Fecha de versión
+        run: echo "OIDO_VERSION=$(date -u +%Y.%m.%d-%H%M)" >> "$GITHUB_ENV"
+
+      - name: Compilar
+        env:
+          OIDO_KEY_PASSWORD: ${{ secrets.OIDO_KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Renombrar
+        run: cp app/build/outputs/apk/release/app-release.apk "Oido-$OIDO_VERSION.apk"
+
+      - name: Publicar para descargar desde el teléfono
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.OIDO_VERSION }}
+          name: Oído ${{ env.OIDO_VERSION }}
+          files: Oido-${{ env.OIDO_VERSION }}.apk

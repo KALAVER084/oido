@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; media-src https: blob:; connect-src 'self' https:">
+<title>Oído</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --fondo: hsl(175 22% 7%); --sup: hsl(175 18% 11%); --menu: hsl(175 18% 13%);
+    --linea: hsl(175 14% 19%); --texto: hsl(175 20% 92%); --suave: hsl(175 10% 58%);
+    --acento: hsl(175 78% 62%); --tinte: hsl(175 45% 18%);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column; overscroll-behavior: none;
+  }
+  .ancho { max-width: 46rem; margin: 0 auto; width: 100%; }
+  button { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; cursor: pointer; }
+  button:focus-visible, li:focus-visible, input:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  input {
+    font: inherit; padding: .5rem .75rem; border: 1px solid var(--linea); border-radius: 10px;
+    background: transparent; color: var(--texto); min-width: 0;
+  }
+  input::placeholder { color: var(--suave); }
+  input:focus { outline: none; border-color: var(--acento); }
+  .primario { padding: .6rem 1rem; border-radius: 10px; background: var(--acento); color: var(--fondo); font-weight: 600; }
+  svg { display: block; }
+
+  header { padding: .9rem 1rem 0; }
+  #f { display: flex; gap: .5rem; align-items: center; }
+  #q { flex: 1; font-size: 1.05rem; padding: .6rem .8rem; }
+  #btn-tema { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; color: var(--suave); border-radius: 50%; }
+  #btn-tema:hover { color: var(--acento); }
+
+  #actualizacion {
+    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    background: var(--tinte); color: var(--texto); border-radius: 12px; padding: .6rem .8rem; margin-bottom: .8rem; font-size: .9rem;
+  }
+  #actualizacion[hidden] { display: none; }
+  #actualizacion span { flex: 1; min-width: 12rem; }
+  #actualizacion .descargar { background: var(--acento); color: var(--fondo); font-weight: 600; padding: .4rem .8rem; border-radius: 8px; }
+  #actualizacion .cerrar { color: var(--suave); padding: .4rem .5rem; }
+  #panel-tema { display: none; margin-top: .8rem; padding: .9rem; background: var(--sup); border-radius: 12px; }
+  #panel-tema.abierto { display: block; }
+  #tono {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 14px; border-radius: 7px; border: 0; padding: 0;
+    background: linear-gradient(90deg, hsl(0 80% 60%), hsl(60 80% 60%), hsl(120 80% 60%), hsl(180 80% 60%), hsl(240 80% 60%), hsl(300 80% 60%), hsl(360 80% 60%));
+  }
+  #tono::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: var(--texto); border: 3px solid var(--fondo); }
+  .fila-tema { display: flex; align-items: center; justify-content: space-between; margin-top: .8rem; }
+  #puntos { display: flex; gap: .6rem; }
+  .punto { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--linea); padding: 0; }
+  #tema-listo { color: var(--acento); padding: .3rem .5rem; }
+
+  nav { display: flex; gap: .25rem; overflow-x: auto; margin-top: .8rem; border-bottom: 1px solid var(--linea); scrollbar-width: none; }
+  nav button { padding: .6rem .8rem; white-space: nowrap; color: var(--suave); border-radius: 8px 8px 0 0; border-bottom: 2px solid transparent; }
+  nav button[aria-pressed="true"] { color: var(--texto); border-bottom-color: var(--acento); font-weight: 600; }
+  nav .cuenta { font-weight: 400; color: var(--suave); font-size: .85rem; margin-left: .3rem; }
+
+  main { flex: 1; overflow-y: auto; padding: 0 1rem 1rem; }
+  #estado { color: var(--suave); margin: .75rem 0; min-height: 1.4em; display: flex; gap: .4rem 1rem; align-items: baseline; flex-wrap: wrap; }
+  .enlace { color: var(--acento); padding: .2rem 0; }
+  .enlace:hover { text-decoration: underline; }
+  .chips { display: flex; gap: .4rem; margin: .75rem 0 0; overflow-x: auto; scrollbar-width: none; align-items: center; }
+  .chips button { padding: .35rem .9rem; border: 1px solid var(--linea); border-radius: 999px; font-size: .9rem; color: var(--suave); white-space: nowrap; }
+  .chips button[aria-pressed="true"] { background: var(--texto); color: var(--fondo); border-color: var(--texto); }
+  .chips .orden { display: flex; align-items: center; gap: .35rem; border-color: var(--acento); color: var(--acento); margin-left: auto; }
+  form.nueva { display: flex; gap: .5rem; width: 100%; }
+  form.nueva input { flex: 1; }
+  form.nueva .primario { padding: .45rem .9rem; }
+  .vacio { color: var(--suave); }
+
+  ol { list-style: none; margin: 0; padding: 0; }
+  li {
+    padding: .65rem .35rem; border-bottom: 1px solid var(--linea); border-radius: 6px; cursor: pointer;
+    display: grid; grid-template-columns: 1fr auto auto; gap: .1rem .5rem; align-items: center;
+  }
+  li:hover, li:active { background: color-mix(in srgb, var(--acento) 8%, transparent); }
+  li.sonando .titulo { color: var(--acento); font-weight: 600; }
+  li.coleccion .titulo { font-weight: 600; }
+  li input { font-size: 1rem; padding: .2rem .5rem; }
+  .titulo { grid-column: 1; overflow-wrap: anywhere; }
+  .canal { grid-column: 1; color: var(--suave); font-size: .85rem; }
+  .dur { grid-column: 2; grid-row: 1 / 3; color: var(--suave); font-size: .85rem; font-variant-numeric: tabular-nums; }
+  .tipo.vivo { background: var(--acento); color: var(--fondo); letter-spacing: .03em; }
+  .tiempo.en-vivo #progreso, .tiempo.en-vivo #t-dur { visibility: hidden; }
+  .tiempo.en-vivo #t-pos { color: var(--acento); font-weight: 600; }
+  .tipo { font-size: .75rem; font-weight: 600; padding: .15rem .5rem; border-radius: 6px; background: var(--tinte); color: var(--acento); }
+  .acciones { grid-column: 3; grid-row: 1 / 3; display: flex; }
+  .acciones button { width: 2.3rem; height: 2.5rem; display: grid; place-items: center; color: var(--suave); }
+  .acciones button:hover, .acciones button:active { color: var(--acento); background: var(--tinte); }
+
+  #menu {
+    position: fixed; display: none; background: var(--menu); border: 1px solid var(--linea);
+    border-radius: 12px; padding: .35rem; min-width: 15rem; max-width: calc(100vw - 16px); max-height: 60vh; overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .5); z-index: 10;
+  }
+  #menu.abierto { display: block; }
+  #menu p { margin: .2rem .5rem .4rem; color: var(--suave); font-size: .85rem; }
+  #menu button { display: block; width: 100%; text-align: left; padding: .65rem .6rem; }
+  #menu button:hover { background: var(--tinte); }
+  #menu input { width: 100%; margin-top: .3rem; }
+
+  #aviso {
+    position: fixed; left: 50%; bottom: 9.5rem; transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
+    background: var(--texto); color: var(--fondo); padding: .55rem 1rem; border-radius: 999px; font-size: .9rem; font-weight: 600;
+    transition: opacity .2s, transform .2s; z-index: 20; white-space: nowrap;
+  }
+  #aviso.visible { opacity: 1; transform: translate(-50%, 0); }
+  #reproductor { background: var(--sup); border-top: 1px solid var(--linea); padding: .7rem 1rem .8rem; display: none; }
+  #reproductor.activo { display: block; }
+  #ahora { margin: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #origen { margin: 0 0 .3rem; font-size: .8rem; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tiempo { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--suave); font-variant-numeric: tabular-nums; }
+  #progreso { flex: 1; accent-color: var(--acento); border: 0; padding: 0; }
+  .controles { display: flex; justify-content: center; align-items: center; gap: 1.6rem; margin-top: .3rem; }
+  .controles button { width: 2.8rem; height: 2.8rem; display: grid; place-items: center; border-radius: 50%; color: var(--texto); }
+  .controles button:hover { color: var(--acento); }
+  #play { width: 3.3rem; height: 3.3rem; background: var(--acento); color: var(--fondo); }
+  #play:hover { color: var(--fondo); filter: brightness(1.08); }
+</style>
+</head>
+<body>
+<header>
+  <div class="ancho">
+    <div id="actualizacion" hidden>
+      <span></span>
+      <button type="button" class="descargar">Descargar</button>
+      <button type="button" class="cerrar" aria-label="Ahora no">Ahora no</button>
+    </div>
+    <form id="f">
+      <input id="q" type="search" placeholder="Buscar en YouTube" autocomplete="off" enterkeyhint="search">
+      <button class="primario">Buscar</button>
+      <button type="button" id="btn-tema" title="Tema" aria-label="Cambiar tema"></button>
+    </form>
+    <div id="panel-tema">
+      <input id="tono" type="range" min="0" max="359" step="1" aria-label="Tono del tema">
+      <div class="fila-tema">
+        <div id="puntos"></div>
+        <button type="button" id="tema-listo">Listo</button>
+      </div>
+    </div>
+    <nav id="pestanas"></nav>
+  </div>
+</header>
+<main>
+  <div class="ancho">
+    <div id="estado"></div>
+    <ol id="lista"></ol>
+  </div>
+</main>
+<div id="menu" role="menu"></div>
+<div id="aviso" role="status" aria-live="polite"></div>
+<section id="reproductor">
+  <div class="ancho">
+    <p id="ahora"></p>
+    <p id="origen"></p>
+    <div class="tiempo">
+      <span id="t-pos">0:00</span>
+      <input id="progreso" type="range" min="0" max="0" value="0" step="1000" aria-label="Posición">
+      <span id="t-dur"></span>
+    </div>
+    <div class="controles">
+      <button id="ant" aria-label="Anterior"></button>
+      <button id="play" aria-label="Reproducir"></button>
+      <button id="sig" aria-label="Siguiente"></button>
+    </div>
+  </div>
+</section>
+<script>
+// ---------- Capas de plataforma ----------
+// La misma interfaz sirve para Android y PC; solo cambia quién busca y quién reproduce.
+let reproductor;
+
+if (window.OidoNativo) {
+  // Android: búsqueda y audio los hace la parte nativa (sigue sonando con la pantalla apagada)
+  const pendientes = new Map();
+  let nPeticion = 0;
+  window.__respuesta = (id, ok, datos) => {
+    const p = pendientes.get(id);
+    if (!p) return;
+    pendientes.delete(id);
+    ok ? p.res(datos) : p.rej(new Error(datos));
+  };
+  const llamar = (metodo, ...args) => new Promise((res, rej) => {
+    const id = 'r' + (++nPeticion);
+    pendientes.set(id, { res, rej });
+    OidoNativo[metodo](id, ...args);
+  });
+  window.oido = {
+    buscar: q => llamar('buscar', q),
+    abrirLista: url => llamar('abrirLista', url),
+    leerListas: async () => JSON.parse(OidoNativo.leerListas()),
+    guardarListas: async l => OidoNativo.guardarListas(JSON.stringify(l)),
+    copiar: async t => OidoNativo.copiar(t),
+    abrirEnlace: url => OidoNativo.abrirEnlace(url),
+  };
+  reproductor = OidoNativo;
+  window.alCambiarFondo = color => OidoNativo.colorFondo(color);
+} else {
+  // PC: el audio suena aquí mismo con un <audio> invisible
+  reproductor = (() => {
+    // Un <video> invisible: reproduce audio normal y también en vivos (que traen imagen)
+    const audio = document.createElement('video');
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
+    let hls = null, vivo = false, promesaHls = null;
+    const soltarHls = () => { if (hls) { hls.destroy(); hls = null; } };
+    // hls.js solo se carga la primera vez que suena un en vivo
+    const cargarHls = () => promesaHls ??= new Promise((res, rej) => {
+      const sc = document.createElement('script');
+      sc.src = 'hls.light.min.js';
+      sc.onload = () => res(window.Hls);
+      sc.onerror = () => rej(new Error('No se pudo cargar el reproductor de en vivos'));
+      document.head.appendChild(sc);
+    });
+    let cola = [], i = 0, titulo = '', cargando = false, error = false, detalle = '', turno = 0, fallos = 0;
+    const emitir = () => window.__estado && window.__estado({
+      hay: cola.length > 0, index: i, total: cola.length, titulo, detalle, vivo,
+      sonando: !audio.paused, quiere: cargando || !audio.paused, cargando, error,
+      pos: (audio.currentTime || 0) * 1000,
+      dur: !vivo && isFinite(audio.duration) ? audio.duration * 1000 : 0,
+    });
+    async function cargar() {
+      const it = cola[i];
+      if (!it) return;
+      const yo = ++turno; // si cambias de audio mientras carga, se ignora el anterior
+      titulo = it.titulo; cargando = true; error = false; detalle = '';
+      emitir();
+      try {
+        const r = await window.oido.audio(it.id);
+        if (yo !== turno) return;
+        soltarHls();
+        vivo = !!r.vivo;
+        if (vivo) {
+          const Hls = await cargarHls();
+          if (yo !== turno) return;
+          hls = new Hls({ enableWorker: false, liveSyncDurationCount: 3 });
+          await new Promise((listo, falla) => {
+            hls.on(Hls.Events.MANIFEST_PARSED, listo);
+            hls.on(Hls.Events.ERROR, (_ev, d) => {
+              if (!d.fatal) return;
+              // Cortes de red durante el en vivo: reintenta; si aún no arrancaba, es un fallo
+              if (d.type === Hls.ErrorTypes.NETWORK_ERROR && audio.currentTime > 0) hls.startLoad();
+              else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+              else falla(new Error('En vivo: ' + d.details));
+            });
+            hls.loadSource(r.url);
+            hls.attachMedia(audio);
+          });
+        } else {
+          audio.src = r.url;
+        }
+        await audio.play();
+        fallos = 0;
+      } catch (e) {
+        if (yo !== turno) return;
+        error = true;
+        // Deja solo la línea útil del error (yt-dlp o el reproductor)
+        const txt = String(e && e.message || e).replace(/^Error invoking remote method '\w+': (Error: )?/, '');
+        detalle = (txt.split('\n').find(l => /ERROR|Error|error/.test(l)) || txt).trim().slice(0, 300);
+        console.error('Oído:', txt);
+        // Salta al siguiente; si fallan 3 seguidos se detiene para que se lea el motivo
+        if (++fallos < 3) setTimeout(() => { if (yo === turno) siguiente(); }, 1500);
+      }
+      if (yo === turno) { cargando = false; emitir(); }
+    }
+    function siguiente() { if (i + 1 < cola.length) { i++; cargar(); } }
+    function anterior() {
+      if (audio.currentTime > 3 || i === 0) { audio.currentTime = 0; return; }
+      i--; cargar();
+    }
+    ['timeupdate', 'play', 'pause', 'loadedmetadata'].forEach(ev => audio.addEventListener(ev, emitir));
+    audio.addEventListener('ended', siguiente);
+    if ('mediaSession' in navigator) { // teclas multimedia del teclado
+      navigator.mediaSession.setActionHandler('nexttrack', siguiente);
+      navigator.mediaSession.setActionHandler('previoustrack', anterior);
+    }
+    document.addEventListener('keydown', e => { // barra espaciadora: pausa / reanuda
+      if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT' && audio.src) {
+        e.preventDefault();
+        audio.paused ? audio.play() : audio.pause();
+      }
+    });
+    return {
+      reproducir(json, indice) { cola = JSON.parse(json); i = indice; fallos = 0; cargar(); },
+      alternar() { if (audio.src) audio.paused ? audio.play() : audio.pause(); },
+      siguiente,
+      anterior,
+      irA(ms) { if (!vivo) audio.currentTime = ms / 1000; },
+      agregar(json) { cola.push(...JSON.parse(json)); emitir(); },
+      quitar(k) { cola.splice(k, 1); if (k <= i) i--; emitir(); },
+      mover(de, a) {
+        const [x] = cola.splice(de, 1);
+        cola.splice(a, 0, x);
+        if (i === de) i = a; else if (i === a) i = de;
+        emitir();
+      },
+    };
+  })();
+}
+
+const ICONOS = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  play: '<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>',
+  pause: '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/>',
+  prev: '<path d="M19 5v14L8.5 12z" fill="currentColor"/><path d="M5.5 5v14"/>',
+  next: '<path d="M5 5v14l10.5-7z" fill="currentColor"/><path d="M18.5 5v14"/>',
+  edit: '<path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/>',
+  tema: '<path d="M12 21a9 9 0 1 1 9-9c0 2.5-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A1 1 0 0 1 12 21z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="16" cy="8.5" r="1.2" fill="currentColor"/>',
+  orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
+  enlace: '<path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.6.6M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.6-.6"/>',
+};
+const icono = (n, t = 20) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n]}</svg>`;
+
+const $ = s => document.querySelector(s);
+const listaEl = $('#lista'), estadoEl = $('#estado'), menu = $('#menu');
+
+let resultados = [];         // videos, mixes y listas de la búsqueda
+let filtro = 'todo';         // 'todo' | 'audios' | 'listas'
+let mensajeResultados = 'Busca algo para escuchar. Las listas y mixes de YouTube también aparecen.';
+let abierta = null;          // {id, titulo, items, cargando, error} — lista o mix de YouTube abierto
+const cache = new Map();     // id de lista/mix -> {titulo, items}
+let listas = [];             // listas propias: [{id, nombre, items}]
+let orden = 'relevancia';    // 'relevancia' | 'nuevos' | 'viejos'
+const ORDENES = { relevancia: 'Relevancia', nuevos: 'Más nuevos', viejos: 'Más viejos' };
+let vista = 'resultados';    // 'resultados' | 'abierta' | 'mislistas' | id de lista propia
+let cola = null;             // {fuente, items, i}
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const listaPorId = id => listas.find(l => l.id === id);
+const esColeccion = it => it.tipo === 'mix' || it.tipo === 'lista';
+const guardar = () => window.oido.guardarListas(listas).catch(() => {});
+const soloVideo = it => ({ tipo: 'video', id: it.id, titulo: it.titulo, canal: it.canal, duracion: it.duracion, fecha: it.fecha || null, vivo: !!it.vivo });
+
+// Con fecha: se ordena por fecha (lo que no tiene fecha va al final).
+// Sin fechas (algunas listas y mixes): "más viejos" invierte el orden original.
+function ordenar(items) {
+  if (orden === 'relevancia') return items;
+  if (!items.some(x => x.fecha)) return orden === 'viejos' ? [...items].reverse() : items;
+  const con = items.filter(x => x.fecha), sin = items.filter(x => !x.fecha);
+  con.sort((a, b) => orden === 'nuevos' ? b.fecha - a.fecha : a.fecha - b.fecha);
+  return [...con, ...sin];
+}
+
+const relativo = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+function haceCuanto(seg) {
+  const d = (seg * 1000 - Date.now()) / 1000;
+  const pasos = [[60, 'second'], [60, 'minute'], [24, 'hour'], [30, 'day'], [12, 'month'], [Infinity, 'year']];
+  let v = d;
+  for (const [n, u] of pasos) {
+    if (Math.abs(v) < n) return relativo.format(Math.round(v), u);
+    v /= n;
+  }
+}
+
+function itemsDeVista() {
+  if (vista === 'resultados') {
+    const r = ordenar(resultados);
+    if (filtro === 'audios') return r.filter(x => !esColeccion(x));
+    if (filtro === 'listas') return r.filter(esColeccion);
+    return r;
+  }
+  if (vista === 'abierta') return ordenar(abierta?.items || []);
+  return listaPorId(vista)?.items || [];
+}
+
+async function videosDe(coleccion) {
+  if (cache.has(coleccion.id)) return cache.get(coleccion.id);
+  const r = await window.oido.abrirLista(coleccion.id);
+  cache.set(coleccion.id, r);
+  return r;
+}
+
+// ---------- Pestañas ----------
+function pintarPestanas() {
+  const nav = $('#pestanas');
+  nav.innerHTML = '';
+  const tab = (id, nombre, cuenta, activa) => {
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', activa ?? vista === id);
+    b.textContent = nombre.length > 28 ? nombre.slice(0, 27) + '…' : nombre;
+    b.title = nombre;
+    if (cuenta != null) {
+      const c = document.createElement('span');
+      c.className = 'cuenta'; c.textContent = cuenta;
+      b.appendChild(c);
+    }
+    b.onclick = () => { vista = id; pintar(); };
+    nav.appendChild(b);
+  };
+  tab('resultados', 'Resultados');
+  if (abierta) tab('abierta', abierta.titulo || 'Cargando…', abierta.cargando ? null : abierta.items.length);
+  tab('mislistas', 'Mis listas', listas.length, vista === 'mislistas' || !!listaPorId(vista));
+}
+
+function crearLista(nombre, items = []) {
+  nombre = (nombre || '').trim();
+  if (!nombre) return null;
+  const l = { id: uid(), nombre: nombre.slice(0, 40), items: items.map(soloVideo) };
+  listas.push(l);
+  guardar();
+  return l;
+}
+
+// ---------- Contenido ----------
+function enlace(txt, fn) {
+  const b = document.createElement('button');
+  b.className = 'enlace'; b.textContent = txt; b.onclick = fn;
+  return b;
+}
+function texto(t) { const s = document.createElement('span'); s.textContent = t; return s; }
+
+function pintarEstado() {
+  estadoEl.innerHTML = '';
+  if (vista === 'resultados') {
+    estadoEl.appendChild(texto(mensajeResultados));
+    if (!resultados.length && window.oido.abrirExtensiones) estadoEl.appendChild(enlace('Carpeta de extensiones', () => window.oido.abrirExtensiones()));
+  } else if (vista === 'abierta') {
+    if (abierta.cargando) estadoEl.appendChild(texto('Cargando audios…'));
+    else if (abierta.error) estadoEl.appendChild(texto('No se pudo abrir. Prueba otra vez o elige otra lista.'));
+    else {
+      estadoEl.appendChild(texto(abierta.items.length === 1 ? '1 audio' : abierta.items.length + ' audios'));
+      if (abierta.items.length) {
+        estadoEl.appendChild(enlace('Reproducir todo', () => tocar('abierta', itemsDeVista()[0])));
+        estadoEl.appendChild(enlace('Guardar en mis listas', () => {
+          const l = crearLista(abierta.titulo || 'Lista guardada', abierta.items);
+          if (l) { vista = l.id; pintar(); }
+        }));
+      }
+    }
+    estadoEl.appendChild(enlace('Cerrar', () => { abierta = null; vista = 'resultados'; pintar(); }));
+  } else if (vista === 'mislistas') {
+    const f = document.createElement('form');
+    f.className = 'nueva';
+    f.innerHTML = '<input placeholder="Nombre de la nueva lista" maxlength="40"><button class="primario">Crear lista</button>';
+    f.onsubmit = e => { e.preventDefault(); if (crearLista(f.querySelector('input').value)) pintar(); };
+    estadoEl.appendChild(f);
+  } else {
+    const l = listaPorId(vista);
+    estadoEl.appendChild(enlace('← Mis listas', () => { vista = 'mislistas'; pintar(); }));
+    estadoEl.appendChild(texto(l.items.length ? l.items.length + ' en la lista' : 'Lista vacía. Busca algo y usa + para añadir audios aquí.'));
+    if (l.items.length) estadoEl.appendChild(enlace('Reproducir todo', () => tocar(vista, l.items[0])));
+    estadoEl.appendChild(enlace('Borrar lista', () => borrarLista(l.id)));
+  }
+
+  // Filtros de resultados
+  const viejo = $('.chips');
+  if (viejo) viejo.remove();
+  const conOrden = (vista === 'resultados' && resultados.length) || (vista === 'abierta' && abierta && abierta.items.length);
+  if (conOrden) {
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    const bo = document.createElement('button');
+    bo.className = 'orden';
+    bo.innerHTML = icono('orden', 16) + '<span></span>';
+    bo.querySelector('span').textContent = ORDENES[orden];
+    bo.title = 'Cambiar orden';
+    bo.onclick = () => { orden = orden === 'relevancia' ? 'nuevos' : orden === 'nuevos' ? 'viejos' : 'relevancia'; pintar(); };
+    if (vista === 'resultados') {
+      [['todo', 'Todo'], ['audios', 'Audios'], ['listas', 'Listas y mixes']].forEach(([id, nombre]) => {
+        const b = document.createElement('button');
+        b.textContent = nombre;
+        b.setAttribute('aria-pressed', filtro === id);
+        b.onclick = () => { filtro = id; pintar(); };
+        chips.appendChild(b);
+      });
+    }
+    chips.appendChild(bo);
+    estadoEl.before(chips);
+  }
+}
+
+function pintarMisListas() {
+  listaEl.innerHTML = '';
+  if (!listas.length) {
+    const p = document.createElement('p');
+    p.className = 'vacio';
+    p.textContent = 'Aún no tienes listas. Crea una aquí arriba o usa + en cualquier resultado.';
+    listaEl.appendChild(p);
+    return;
+  }
+  listas.forEach(l => {
+    const li = document.createElement('li');
+    li.tabIndex = 0;
+    li.innerHTML = '<span class="titulo"></span><span class="canal"></span><span class="dur"></span><span class="acciones"></span>';
+    li.querySelector('.titulo').textContent = l.nombre;
+    li.querySelector('.canal').textContent = l.items.length === 1 ? '1 audio' : l.items.length + ' audios';
+    if (cola && cola.fuente === l.id) { li.classList.add('sonando'); li.querySelector('.dur').textContent = 'Sonando'; }
+    const acc = li.querySelector('.acciones');
+    const accion = (txt, titulo, fn) => {
+      const b = document.createElement('button');
+      b.innerHTML = icono(txt); b.title = titulo; b.setAttribute('aria-label', titulo);
+      b.onclick = e => { e.stopPropagation(); fn(); };
+      acc.appendChild(b);
+    };
+    if (l.items.length) accion('play', 'Reproducir', () => tocar(l.id, l.items[0]));
+    accion('edit', 'Renombrar', () => renombrar(li, l));
+    accion('x', 'Borrar lista', () => borrarLista(l.id));
+    const abrirL = () => { vista = l.id; pintar(); };
+    li.onclick = abrirL;
+    li.onkeydown = e => { if (e.key === 'Enter') abrirL(); };
+    listaEl.appendChild(li);
+  });
+}
+
+function renombrar(li, l) {
+  const t = li.querySelector('.titulo');
+  const inp = document.createElement('input');
+  inp.value = l.nombre; inp.maxLength = 40;
+  t.replaceWith(inp);
+  inp.onclick = e => e.stopPropagation();
+  let hecho = false;
+  const fin = ok => {
+    if (hecho) return; hecho = true;
+    if (ok && inp.value.trim()) { l.nombre = inp.value.trim(); guardar(); }
+    pintar();
+  };
+  inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') fin(true); if (e.key === 'Escape') fin(false); };
+  inp.onblur = () => fin(true);
+  inp.focus(); inp.select();
+}
+
+function pintar() {
+  pintarPestanas();
+  pintarEstado();
+  if (vista === 'mislistas') return pintarMisListas();
+  const items = itemsDeVista();
+  const propia = !!listaPorId(vista);
+  listaEl.innerHTML = '';
+
+  items.forEach((it, i) => {
+    const li = document.createElement('li');
+    li.tabIndex = 0;
+    li.innerHTML = '<span class="titulo"></span><span class="canal"></span><span class="dur"></span><span class="acciones"></span>';
+    li.querySelector('.titulo').textContent = it.titulo;
+    li.querySelector('.canal').textContent = [it.canal, it.fecha ? haceCuanto(it.fecha) : ''].filter(Boolean).join(' · ');
+    if (esColeccion(it)) {
+      li.classList.add('coleccion');
+      const t = document.createElement('span');
+      t.className = 'tipo'; t.textContent = it.tipo === 'mix' ? 'Mix' : 'Lista';
+      li.querySelector('.dur').appendChild(t);
+    } else if (it.vivo) {
+      const t = document.createElement('span');
+      t.className = 'tipo vivo'; t.textContent = 'EN VIVO';
+      li.querySelector('.dur').appendChild(t);
+    } else {
+      li.querySelector('.dur').textContent = it.duracion || '';
+    }
+    if (cola && cola.fuente === vista && cola.items[cola.i] === it) li.classList.add('sonando');
+
+    const acc = li.querySelector('.acciones');
+    const accion = (txt, titulo, fn) => {
+      const b = document.createElement('button');
+      b.innerHTML = icono(txt); b.title = titulo; b.setAttribute('aria-label', titulo);
+      b.onclick = e => { e.stopPropagation(); fn(b); };
+      acc.appendChild(b);
+    };
+    accion('enlace', 'Copiar enlace', () => copiarEnlace(it));
+    accion('plus', esColeccion(it) ? 'Añadir todos sus audios a una lista' : 'Añadir a una lista', b => abrirMenu(b, it));
+    if (propia) {
+      if (i > 0) accion('up', 'Subir', () => mover(i, i - 1));
+      if (i < items.length - 1) accion('down', 'Bajar', () => mover(i, i + 1));
+      accion('x', 'Quitar de la lista', () => quitar(i));
+    }
+
+    const activar = () => esColeccion(it) ? abrir(it) : tocar(vista, it);
+    li.onclick = activar;
+    li.onkeydown = e => { if (e.key === 'Enter') activar(); };
+    listaEl.appendChild(li);
+  });
+}
+
+// Abre un mix o lista de YouTube y empieza a sonar
+async function abrir(col) {
+  abierta = { id: col.id, titulo: col.titulo, items: [], cargando: true };
+  vista = 'abierta';
+  pintar();
+  const yo = abierta;
+  try {
+    const r = await videosDe(col);
+    if (yo !== abierta) return;
+    abierta.items = r.items;
+    abierta.cargando = false;
+    pintar();
+    if (r.items.length) tocar('abierta', r.items[0]);
+  } catch {
+    if (yo !== abierta) return;
+    abierta.cargando = false; abierta.error = true;
+    pintar();
+  }
+}
+
+function mover(de, a) {
+  const items = listaPorId(vista).items;
+  [items[de], items[a]] = [items[a], items[de]];
+  if (cola && cola.items === items) {
+    reproductor.mover(de, a);
+    if (cola.i === de) cola.i = a; else if (cola.i === a) cola.i = de;
+  }
+  guardar(); pintar();
+}
+
+function quitar(i) {
+  const items = listaPorId(vista).items;
+  items.splice(i, 1);
+  if (cola && cola.items === items) {
+    reproductor.quitar(i);
+    if (i <= cola.i) cola.i--;
+  }
+  guardar(); pintar();
+}
+
+function borrarLista(id) {
+  const l = listaPorId(id);
+  if (!confirm(`¿Borrar la lista "${l.nombre}"?`)) return;
+  listas = listas.filter(x => x.id !== id);
+  if (cola && cola.fuente === id) cola.fuente = 'borrada';
+  vista = 'mislistas';
+  guardar(); pintar();
+}
+
+// ---------- Menú "añadir a lista" ----------
+async function anadir(lista, item) {
+  const nuevos = esColeccion(item) ? (await videosDe(item)).items : [item];
+  const agregados = [];
+  for (const v of nuevos) if (!lista.items.some(x => x.id === v.id)) { lista.items.push(soloVideo(v)); agregados.push(soloVideo(v)); }
+  if (cola && cola.items === lista.items && agregados.length) reproductor.agregar(JSON.stringify(agregados));
+  guardar(); pintar();
+}
+
+function abrirMenu(boton, item) {
+  menu.innerHTML = '';
+  const p = document.createElement('p');
+  p.textContent = esColeccion(item) ? 'Añadir todos sus audios a…' : 'Añadir a…';
+  menu.appendChild(p);
+  listas.forEach(l => {
+    const b = document.createElement('button');
+    const ya = !esColeccion(item) && l.items.some(x => x.id === item.id);
+    b.textContent = l.nombre + (ya ? '  ✓' : '');
+    b.onclick = () => { cerrarMenu(); if (!ya) anadir(l, item).catch(() => {}); };
+    menu.appendChild(b);
+  });
+  const f = document.createElement('form');
+  f.innerHTML = '<input placeholder="Nueva lista y Enter" maxlength="40">';
+  const inp = f.querySelector('input');
+  if (esColeccion(item)) inp.value = item.titulo.slice(0, 40);
+  f.onsubmit = e => {
+    e.preventDefault();
+    const l = crearLista(inp.value);
+    cerrarMenu();
+    if (l) anadir(l, item).catch(() => {}); else pintar();
+  };
+  menu.appendChild(f);
+
+  menu.classList.add('abierto');
+  const r = boton.getBoundingClientRect();
+  const m = menu.getBoundingClientRect();
+  menu.style.left = Math.max(8, Math.min(r.right - m.width, innerWidth - m.width - 8)) + 'px';
+  menu.style.top = (r.bottom + m.height + 8 > innerHeight ? r.top - m.height - 4 : r.bottom + 4) + 'px';
+  (listas.length ? menu.querySelector('button') : inp).focus();
+}
+function cerrarMenu() { menu.classList.remove('abierto'); }
+document.addEventListener('pointerdown', e => { if (!menu.contains(e.target)) cerrarMenu(); });
+
+// ---------- Búsqueda ----------
+$('#f').onsubmit = async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim();
+  if (!q) return;
+  $('#q').blur();
+  vista = 'resultados';
+  resultados = [];
+  mensajeResultados = 'Buscando…';
+  pintar();
+  try {
+    resultados = await window.oido.buscar(q);
+    const n = resultados.filter(esColeccion).length;
+    mensajeResultados = resultados.length
+      ? `${resultados.length - n} audios y ${n} listas o mixes`
+      : 'Sin resultados. Prueba otras palabras.';
+  } catch {
+    mensajeResultados = 'No se pudo buscar. Revisa tu conexión a internet.';
+  }
+  pintar();
+};
+
+// ---------- Reproducción (la hace Android, incluso con la pantalla apagada) ----------
+const fmt = ms => {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  const p = n => String(n).padStart(2, '0');
+  return h ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
+};
+
+function tocar(fuente, item) {
+  // Resultados se copian (una búsqueda nueva no corta lo que suena) y sin mixes/listas.
+  // Las listas propias se usan en vivo: lo que añadas entra en la cola.
+  let items;
+  if (fuente === 'resultados') items = ordenar(resultados).filter(r => !esColeccion(r));
+  else if (fuente === 'abierta') items = ordenar(abierta.items);
+  else items = listaPorId(fuente).items;
+  const titulo = fuente === 'abierta' ? abierta.titulo : null;
+  cola = { fuente, items, i: Math.max(0, items.indexOf(item)), titulo };
+  reproductor.reproducir(JSON.stringify(items.map(soloVideo)), cola.i, String(fuente), titulo || '');
+  $('#reproductor').classList.add('activo');
+  $('#ahora').textContent = 'Cargando: ' + item.titulo;
+  pintar();
+}
+
+function nombreOrigen() {
+  if (!cola) return '';
+  const l = listaPorId(cola.fuente);
+  return l ? 'Lista: ' + l.nombre : cola.titulo ? cola.titulo : 'Resultados';
+}
+
+let arrastrando = false;
+const barra = $('#progreso');
+barra.addEventListener('input', () => { arrastrando = true; $('#t-pos').textContent = fmt(+barra.value); });
+barra.addEventListener('change', () => { reproductor.irA(+barra.value); arrastrando = false; });
+
+// Android avisa el estado del reproductor varias veces por segundo
+window.__estado = s => {
+  const r = $('#reproductor');
+  if (!s.hay) { r.classList.remove('activo'); return; }
+  r.classList.add('activo');
+  if (cola && cola.i !== s.index) { cola.i = s.index; pintar(); }
+  $('#ahora').textContent = (s.error ? 'No se pudo cargar: ' : s.cargando ? 'Cargando: ' : '') + s.titulo;
+  const origen = nombreOrigen();
+  $('#origen').textContent = s.error && s.detalle
+    ? 'Motivo: ' + s.detalle
+    : (origen ? origen + ' · ' : '') + `${Math.max(1, s.index + 1)} de ${s.total}`;
+  $('#origen').title = s.detalle || '';
+  $('#play').innerHTML = icono(s.quiere ? 'pause' : 'play', 26);
+  $('#play').setAttribute('aria-label', s.quiere ? 'Pausar' : 'Reproducir');
+  document.querySelector('.tiempo').classList.toggle('en-vivo', !!s.vivo);
+  if (s.vivo) $('#t-pos').textContent = '● EN VIVO';
+  else if (!arrastrando) {
+    barra.max = s.dur || 0;
+    barra.value = s.pos;
+    $('#t-pos').textContent = fmt(s.pos);
+  }
+  $('#t-dur').textContent = s.dur ? fmt(s.dur) : '';
+};
+
+// Al reabrir la app mientras suena algo
+window.__restaurar = c => {
+  if (cola) return;
+  const l = listaPorId(c.fuente);
+  cola = { fuente: c.fuente || 'resultados', items: l ? l.items : c.items, i: c.i, titulo: c.titulo || null };
+  pintar();
+};
+
+// Botón "atrás" de Android
+window.__atras = () => {
+  if (menu.classList.contains('abierto')) { cerrarMenu(); return true; }
+  if ($('#panel-tema').classList.contains('abierto')) { $('#panel-tema').classList.remove('abierto'); return true; }
+  if (listaPorId(vista)) { vista = 'mislistas'; pintar(); return true; }
+  if (vista !== 'resultados') { vista = 'resultados'; pintar(); return true; }
+  return false;
+};
+
+$('#sig').onclick = () => reproductor.siguiente();
+$('#ant').onclick = () => reproductor.anterior();
+$('#play').onclick = () => reproductor.alternar();
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenu(); });
+
+// ---------- Aviso de versión nueva (Android) ----------
+window.__actualizacion = ({ version, url }) => {
+  const a = $('#actualizacion');
+  a.querySelector('span').textContent = 'Hay una versión nueva de Oído (' + version + ')';
+  a.querySelector('.descargar').onclick = () => { window.oido.abrirEnlace(url); a.hidden = true; };
+  a.querySelector('.cerrar').onclick = () => { a.hidden = true; };
+  a.hidden = false;
+};
+
+// ---------- Copiar enlace (para mandarlo por WhatsApp, etc.) ----------
+function enlaceDe(it) {
+  if (/^https?:/.test(it.id)) return it.id;                       // Android: listas y mixes ya traen su dirección
+  if (it.tipo === 'mix' && /^RD[\w-]{11}$/.test(it.id))
+    return `https://www.youtube.com/watch?v=${it.id.slice(2)}&list=${it.id}`;
+  if (it.tipo === 'mix' || it.tipo === 'lista') return `https://www.youtube.com/playlist?list=${it.id}`;
+  return `https://youtu.be/${it.id}`;
+}
+let temporizadorAviso;
+function avisar(texto) {
+  const a = $('#aviso');
+  a.textContent = texto;
+  a.classList.add('visible');
+  clearTimeout(temporizadorAviso);
+  temporizadorAviso = setTimeout(() => a.classList.remove('visible'), 1800);
+}
+async function copiarEnlace(it) {
+  const url = enlaceDe(it);
+  try {
+    if (window.oido.copiar) await window.oido.copiar(url);
+    else await navigator.clipboard.writeText(url);
+    avisar('Enlace copiado');
+  } catch {
+    avisar('No se pudo copiar el enlace');
+  }
+}
+
+// ---------- Tema: eliges un tono y se calculan fondo, texto y acento ----------
+const TONOS = [175, 35, 350, 265, 130, 210];
+function colores(h) {
+  const ajuste = (h >= 40 && h <= 80) ? -6 : (h >= 210 && h <= 280) ? 6 : 0; // amarillos brillan más, azules menos
+  return {
+    '--fondo': `hsl(${h} 22% 7%)`, '--sup': `hsl(${h} 18% 11%)`, '--menu': `hsl(${h} 18% 13%)`,
+    '--linea': `hsl(${h} 14% 19%)`, '--texto': `hsl(${h} 20% 92%)`, '--suave': `hsl(${h} 10% 58%)`,
+    '--acento': `hsl(${h} 78% ${62 + ajuste}%)`, '--tinte': `hsl(${h} 45% 18%)`,
+  };
+}
+function hslAHex(h, s, l) {
+  s /= 100; l /= 100;
+  const f = n => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, '0'); };
+  return '#' + f(0) + f(8) + f(4);
+}
+function aplicarTema(h) {
+  h = Math.round(+h) % 360;
+  for (const [k, v] of Object.entries(colores(h))) document.documentElement.style.setProperty(k, v);
+  try { localStorage.setItem('oido-tono', h); } catch {}
+  if (window.alCambiarFondo) window.alCambiarFondo(hslAHex(h, 22, 7));
+}
+function prepararTema() {
+  let h = 175;
+  try { h = +(localStorage.getItem('oido-tono') ?? 175); } catch {}
+  const panel = $('#panel-tema'), barra = $('#tono');
+  barra.value = h;
+  aplicarTema(h);
+  $('#btn-tema').innerHTML = icono('tema', 22);
+  $('#btn-tema').onclick = () => panel.classList.toggle('abierto');
+  barra.addEventListener('input', () => aplicarTema(barra.value));
+  const puntos = $('#puntos');
+  TONOS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'punto';
+    b.style.background = `hsl(${t} 75% 60%)`;
+    b.setAttribute('aria-label', 'Tono ' + t);
+    b.onclick = () => { barra.value = t; aplicarTema(t); };
+    puntos.appendChild(b);
+  });
+  $('#tema-listo').onclick = () => panel.classList.remove('abierto');
+}
+prepararTema();
+$('#ant').innerHTML = icono('prev', 22);
+$('#sig').innerHTML = icono('next', 22);
+$('#play').innerHTML = icono('play', 26);
+
+// ---------- Inicio ----------
+window.oido.leerListas().then(l => { listas = Array.isArray(l) ? l : []; pintar(); });
+pintar();
+</script>
+</body>
+</html>
