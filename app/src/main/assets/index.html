@@ -131,10 +131,10 @@
   #btn-sync.ajustado { color: var(--acento); background: var(--tinte); }
   #btn-cancelar-sync { border: 1px solid var(--linea); color: var(--suave); border-radius: 999px; padding: .3rem .9rem; font-size: .9rem; }
   .zona-letra { position: relative; flex: 1; min-height: 0; overflow: hidden; }
-  #guia { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--acento); pointer-events: none; z-index: 1; }
-  #guia span { position: absolute; right: 1rem; top: -.75rem; background: var(--fondo); color: var(--acento); font-size: .75rem; padding: 0 .35rem; }
   #letra-cuerpo.sincronizando { padding-top: 45vh; padding-bottom: 45vh; }
-  #letra-cuerpo.sincronizando p { color: var(--texto); }
+  #letra-cuerpo.sincronizando p { color: var(--suave); opacity: .55; }
+  #letra-cuerpo.sincronizando p.elegida { color: var(--acento); opacity: 1; font-weight: 700; transform: scale(1.06); }
+  #elegida { margin: 0; text-align: center; color: var(--texto); font-weight: 600; font-size: .95rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pie-sync { position: relative; z-index: 2; background: var(--fondo); display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .5rem 1rem .9rem; }
   .pie-sync:has(> [hidden] + [hidden]) { padding: 0; }
   #pista-sync { margin: 0; text-align: center; color: var(--suave); font-size: .85rem; }
@@ -210,10 +210,10 @@
   </div>
   <div class="zona-letra">
     <div id="letra-cuerpo" class="ancho"></div>
-    <div id="guia" hidden><span>ahora</span></div>
   </div>
   <div class="pie-sync">
-    <p id="pista-sync" hidden>Pon en la guía la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse</p>
+    <p id="pista-sync" hidden>Desliza hasta que se pinte la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse</p>
+    <p id="elegida" hidden></p>
     <button id="btn-ahora" class="primario" hidden>¡Ahora!</button>
   </div>
 </section>
@@ -1117,8 +1117,8 @@ function pintarAccionesLetra() {
   $('#btn-sync').title = letra && letra.ajustada ? 'Volver a sincronizar' : 'Sincronizar letra';
   $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando;
   $('#btn-cancelar-sync').hidden = !sincronizando;
-  $('#guia').hidden = !sincronizando;
   $('#pista-sync').hidden = !sincronizando;
+  $('#elegida').hidden = !sincronizando;
   $('#btn-ahora').hidden = !sincronizando;
 }
 
@@ -1193,7 +1193,26 @@ function pintarModoSync(cuerpo) {
   (letra.lineas || []).forEach((l, k) => { if (l.t <= posAhora()) i = k + 1; });
   const p = cuerpo.querySelector(`p[data-i="${Math.min(i, lineasBase().length - 1)}"]`);
   if (p) p.scrollIntoView({ block: 'center' });
+  resaltarElegida();
 }
+
+// Mientras deslizas, se pinta la línea que quedó en el centro: esa es la que vas a marcar
+let resaltadoPendiente = false;
+function resaltarElegida() {
+  if (!sincronizando) return;
+  const i = lineaEnLaGuia();
+  const cuerpo = $('#letra-cuerpo');
+  cuerpo.querySelectorAll('p.elegida').forEach(p => p.classList.remove('elegida'));
+  const p = cuerpo.querySelector(`p[data-i="${i}"]`);
+  if (p) p.classList.add('elegida');
+  const l = lineasBase()[i];
+  $('#elegida').textContent = l ? `Marcarás: “${l.texto}”` : '';
+}
+$('#letra-cuerpo').addEventListener('scroll', () => {
+  if (!sincronizando || resaltadoPendiente) return;
+  resaltadoPendiente = true;
+  requestAnimationFrame(() => { resaltadoPendiente = false; resaltarElegida(); });
+}, { passive: true });
 
 function lineaEnLaGuia() {
   const cuerpo = $('#letra-cuerpo');
