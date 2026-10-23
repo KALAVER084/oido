@@ -135,7 +135,11 @@
   #guia span { position: absolute; right: 1rem; top: -.75rem; background: var(--fondo); color: var(--acento); font-size: .75rem; padding: 0 .35rem; }
   #letra-cuerpo.sincronizando { padding-top: 45vh; padding-bottom: 45vh; }
   #letra-cuerpo.sincronizando p { color: var(--texto); }
-  #pista-sync { margin: 0; padding: .4rem 1rem .8rem; text-align: center; color: var(--suave); font-size: .85rem; }
+  .pie-sync { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .3rem 1rem .9rem; }
+  #pista-sync { margin: 0; text-align: center; color: var(--suave); font-size: .85rem; }
+  #pista-sync b { color: var(--acento); }
+  #btn-ahora { font-size: 1.15rem; padding: .7rem 2.6rem; border-radius: 999px; }
+  #btn-ahora:active { transform: scale(.96); }
   .canal .ajustada { color: var(--acento); }
   #letra-cuerpo { flex: 1; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
   #letra-cuerpo p { margin: .9rem 0; font-size: 1.25rem; line-height: 1.35; color: var(--suave); transition: color .25s, transform .25s; }
@@ -206,7 +210,10 @@
     <div id="letra-cuerpo" class="ancho"></div>
     <div id="guia" hidden><span>ahora</span></div>
   </div>
-  <p id="pista-sync" hidden>Desliza hasta la línea que se canta ahora y suelta</p>
+  <div class="pie-sync">
+    <p id="pista-sync" hidden>Pon en la guía la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse</p>
+    <button id="btn-ahora" class="primario" hidden>¡Ahora!</button>
+  </div>
 </section>
 <iframe id="karaoke-marco" src="karaoke.html" hidden title="Karaoke"></iframe>
 <div id="menu" role="menu"></div>
@@ -958,6 +965,9 @@ let modoLetra = 'mini';
 try { modoLetra = localStorage.getItem('oido-letra-modo') || 'mini'; } catch {}
 let pantallaLetra = false;    // ¿se está mostrando la pantalla completa ahora?
 let posActual = 0;            // ms, la última posición que avisó el reproductor
+let posMarca = 0;             // cuándo llegó ese aviso (para calcular la posición exacta en un toque)
+let posSonando = false;
+const posAhora = () => posActual + (posSonando ? Date.now() - posMarca : 0);
 let sincronizando = false;    // modo "sync": deslizar la letra hasta la línea que suena
 
 // Ajuste de tiempo por video: { idDelVideo: milisegundos }. Se recuerda para siempre.
@@ -1046,6 +1056,8 @@ async function buscarLetra(it) {
 
 function actualizarLetra(s) {
   posActual = s.pos;
+  posMarca = Date.now();
+  posSonando = !!s.sonando;
   const it = cola && s.hay ? cola.items[s.index] : null;
   const id = it && !it.vivo ? it.id : null;
   if (id !== (letra ? letra.id : null)) {
@@ -1105,6 +1117,7 @@ function pintarAccionesLetra() {
   $('#btn-cancelar-sync').hidden = !sincronizando;
   $('#guia').hidden = !sincronizando;
   $('#pista-sync').hidden = !sincronizando;
+  $('#btn-ahora').hidden = !sincronizando;
 }
 
 function pintarPantallaLetra() {
@@ -1162,36 +1175,25 @@ function moverLetra(pos, forzar) {
 
 function cerrarPantallaLetra() { sincronizando = false; cambiarModoLetra('cerrada'); }
 
-// ---------- Sincronizar a mano: deslizar hasta la línea que suena y soltar ----------
-let ignorarScrollHasta = 0, temporizadorSync = null, tocando = false, movido = false;
+// ---------- Sincronizar a mano: poner en la guía la línea que viene y tocar "¡Ahora!" ----------
+const REACCION_MS = 150;   // lo que tardamos en reaccionar al oír la línea
 
 function pintarModoSync(cuerpo) {
   cuerpo.classList.remove('fija');
-  const base = lineasBase();
-  base.forEach((l, i) => {
+  lineasBase().forEach((l, i) => {
     const p = document.createElement('p');
     p.textContent = l.texto;
     p.dataset.i = i;
     cuerpo.appendChild(p);
   });
-  // Empieza cerca de donde debería ir, para deslizar poco
+  // Empieza en la línea que vendría a continuación, para deslizar poco
   let i = 0;
-  (letra.lineas || []).forEach((l, k) => { if (l.t <= posActual) i = k; });
-  const p = cuerpo.querySelector(`p[data-i="${i}"]`);
-  ignorarScrollHasta = Date.now() + 600;
-  movido = false;
+  (letra.lineas || []).forEach((l, k) => { if (l.t <= posAhora()) i = k + 1; });
+  const p = cuerpo.querySelector(`p[data-i="${Math.min(i, lineasBase().length - 1)}"]`);
   if (p) p.scrollIntoView({ block: 'center' });
 }
 
-function programarSync() {
-  if (!sincronizando || Date.now() < ignorarScrollHasta) return;
-  movido = true;
-  clearTimeout(temporizadorSync);
-  if (!tocando) temporizadorSync = setTimeout(fijarSincronizacion, 450);
-}
-
-function fijarSincronizacion() {
-  if (!sincronizando || !movido || !letra) return;
+function lineaEnLaGuia() {
   const cuerpo = $('#letra-cuerpo');
   const r = cuerpo.getBoundingClientRect();
   const centro = r.top + r.height / 2;
@@ -1201,10 +1203,16 @@ function fijarSincronizacion() {
     const d = Math.abs(b.top + b.height / 2 - centro);
     if (d < dist) { dist = d; mejor = p; }
   });
-  const linea = mejor && lineasBase()[+mejor.dataset.i];
+  return mejor ? +mejor.dataset.i : -1;
+}
+
+// Se toca justo cuando empieza a cantarse la línea de la guía
+function marcarAhora() {
+  if (!sincronizando || !letra) return;
+  const momento = posAhora() - REACCION_MS;
+  const linea = lineasBase()[lineaEnLaGuia()];
   if (!linea) return;
-  // La línea del centro se está cantando ahora: la diferencia es el desfase de este video
-  ajustes[letra.id] = Math.round(posActual - linea.t);
+  ajustes[letra.id] = Math.round(momento - linea.t);
   guardarAjustes();
   sincronizando = false;
   letra = conAjuste(letra.id, cacheLetra.get(letra.id) || letra);
@@ -1228,12 +1236,7 @@ $('#btn-deshacer').onclick = () => {
   avisar('Ajuste eliminado');
 };
 $('#btn-cancelar-sync').onclick = () => { sincronizando = false; pintarLetra(); };
-{
-  const cuerpo = $('#letra-cuerpo');
-  cuerpo.addEventListener('scroll', programarSync, { passive: true });
-  cuerpo.addEventListener('touchstart', () => { tocando = true; clearTimeout(temporizadorSync); }, { passive: true });
-  cuerpo.addEventListener('touchend', () => { tocando = false; if (movido) programarSync(); }, { passive: true });
-}
+$('#btn-ahora').onclick = marcarAhora;
 
 // Un solo botón: sincronizada mini → completa → cerrada; fija (sin franja): completa ↔ cerrada
 $('#btn-letra').innerHTML = icono('letra', 24);
