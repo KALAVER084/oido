@@ -108,22 +108,23 @@
   #menu input { width: 100%; margin-top: .3rem; }
 
   [hidden] { display: none !important; }
-  .fila-titulo { display: flex; align-items: center; gap: .5rem; }
-  .fila-titulo #ahora { flex: 1; min-width: 0; }
-  #btn-letra { width: 2.2rem; height: 2.2rem; display: grid; place-items: center; color: var(--suave); flex: none; }
-  #btn-letra.activo { color: var(--acento); }
-  #franja {
-    display: flex; align-items: flex-start; gap: .5rem; width: 100%; text-align: left;
-    border-left: 2px solid var(--acento); border-radius: 0; padding: .2rem .5rem; margin: .1rem 0 .5rem;
+  .controles { position: relative; }
+  .controles #btn-letra {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    width: 2.8rem; height: 2.8rem; color: var(--suave);
   }
-  #franja .lineas { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .controles #btn-letra:hover { color: var(--acento); }
+  .controles #btn-letra.activo { color: var(--acento); }
+  .controles #btn-letra.lleno { color: var(--acento); background: var(--tinte); }
+  #franja {
+    display: flex; flex-direction: column; min-width: 0;
+    border-left: 2px solid var(--acento); padding: .2rem .5rem; margin: .1rem 0 .5rem;
+  }
   #franja .l1 { color: var(--acento); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #franja .l2 { color: var(--suave); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
-  #franja .exp { color: var(--suave); padding-top: .15rem; }
   body.letra-abierta header, body.letra-abierta main { display: none; }
   #pantalla-letra { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .cab-letra { display: flex; align-items: center; gap: .5rem; padding: .8rem 1rem .4rem; }
-  #cerrar-letra { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; color: var(--suave); flex: none; }
+  .cab-letra { display: flex; align-items: center; gap: .5rem; padding: 1rem 1rem .4rem; }
   #letra-titulo { color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #letra-cuerpo { flex: 1; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
   #letra-cuerpo p { margin: .9rem 0; font-size: 1.25rem; line-height: 1.35; color: var(--suave); transition: color .25s, transform .25s; }
@@ -181,7 +182,6 @@
 </main>
 <section id="pantalla-letra" hidden>
   <div class="ancho cab-letra">
-    <button id="cerrar-letra" aria-label="Cerrar letra"></button>
     <span id="letra-titulo"></span>
   </div>
   <div id="letra-cuerpo" class="ancho"></div>
@@ -190,15 +190,12 @@
 <div id="aviso" role="status" aria-live="polite"></div>
 <section id="reproductor">
   <div class="ancho">
-    <div class="fila-titulo">
-      <p id="ahora"></p>
-      <button id="btn-letra" hidden aria-label="Letra"></button>
-    </div>
+    <p id="ahora"></p>
     <p id="origen"></p>
-    <button id="franja" hidden aria-label="Ver letra en pantalla completa">
-      <span class="lineas"><span class="l1"></span><span class="l2"></span></span>
-      <span class="exp"></span>
-    </button>
+    <div id="franja" hidden>
+      <span class="l1"></span>
+      <span class="l2"></span>
+    </div>
     <div class="tiempo">
       <span id="t-pos">0:00</span>
       <input id="progreso" type="range" min="0" max="0" value="0" step="1000" aria-label="Posición">
@@ -208,6 +205,7 @@
       <button id="ant" aria-label="Anterior"></button>
       <button id="play" aria-label="Reproducir"></button>
       <button id="sig" aria-label="Siguiente"></button>
+      <button id="btn-letra" hidden aria-label="Letra"></button>
     </div>
   </div>
 </section>
@@ -360,9 +358,7 @@ const ICONOS = {
   edit: '<path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/>',
   tema: '<path d="M12 21a9 9 0 1 1 9-9c0 2.5-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A1 1 0 0 1 12 21z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="16" cy="8.5" r="1.2" fill="currentColor"/>',
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
-  letra: '<path d="M5 6h14M5 12h9M5 18h12"/>',
-  expandir: '<path d="M15 4h5v5M20 4l-6 6M9 20H4v-5M4 20l6-6"/>',
-  abajo: '<path d="M6 9l6 6 6-6"/>',
+  letra: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none"/>',
   enlace: '<path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.6.6M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.6-.6"/>',
 };
 const icono = (n, t = 20) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n]}</svg>`;
@@ -918,9 +914,10 @@ window.__importar = importarListas; // Android: "Abrir con Oído" desde WhatsApp
 // ---------- Letra (LRCLIB): sincronizada si la versión coincide, si no, fija ----------
 const cacheLetra = new Map();
 let letra = null;             // { id, estado: 'cargando' | 'sin' | 'sinc' | 'fija', lineas, texto }
-let letraVisible = true;      // franja de karaoke mostrada u oculta (se recuerda)
-try { letraVisible = localStorage.getItem('oido-letra') !== '0'; } catch {}
-let pantallaLetra = false;
+// Un solo botón cicla: 'mini' (franja) → 'completa' → 'cerrada' → 'mini'… (se recuerda)
+let modoLetra = 'mini';
+try { modoLetra = localStorage.getItem('oido-letra-modo') || 'mini'; } catch {}
+let pantallaLetra = false;    // ¿se está mostrando la pantalla completa ahora?
 let lineaActual = -1;
 let tituloLetra = '';
 
@@ -1010,16 +1007,27 @@ function actualizarLetra(s) {
 }
 
 function pintarLetra() {
-  const hay = letra && (letra.estado === 'sinc' || letra.estado === 'fija');
+  const est = letra ? letra.estado : 'sin';
+  const conLetra = est === 'sinc' || est === 'fija';
+  const mini = modoLetra === 'mini' && est === 'sinc';
+  pantallaLetra = modoLetra === 'completa' && (conLetra || est === 'cargando');
   const b = $('#btn-letra');
-  b.hidden = !hay;
-  b.classList.toggle('activo', !!hay && (letra.estado === 'fija' || letraVisible));
-  b.title = letra && letra.estado === 'fija' ? 'Ver letra (sin sincronizar)' : letraVisible ? 'Ocultar letra' : 'Mostrar letra';
-  $('#franja').hidden = !(letra && letra.estado === 'sinc' && letraVisible && !pantallaLetra);
+  b.hidden = !(conLetra || pantallaLetra);
+  b.classList.toggle('activo', mini);
+  b.classList.toggle('lleno', pantallaLetra);
+  b.title = pantallaLetra ? 'Cerrar letra' : mini ? 'Letra en pantalla completa'
+    : est === 'fija' ? 'Ver letra (sin sincronizar)' : 'Mostrar letra';
+  $('#franja').hidden = !mini;
   document.body.classList.toggle('letra-abierta', pantallaLetra);
   $('#pantalla-letra').hidden = !pantallaLetra;
   if (pantallaLetra) pintarPantallaLetra();
-  if (letra && letra.estado === 'sinc') { const l = lineaActual; lineaActual = -2; moverLetra(null, l); }
+  if (est === 'sinc') { const l = lineaActual; lineaActual = -2; moverLetra(null, l); }
+}
+
+function cambiarModoLetra(modo) {
+  modoLetra = modo;
+  try { localStorage.setItem('oido-letra-modo', modo); } catch {}
+  pintarLetra();
 }
 
 function pintarPantallaLetra() {
@@ -1037,6 +1045,7 @@ function pintarPantallaLetra() {
     p.className = 'texto-fijo';
     p.textContent = letra.texto;
     cuerpo.append(nota, p);
+    cuerpo.scrollTop = 0;
     return;
   }
   letra.lineas.forEach((l, i) => {
@@ -1045,6 +1054,7 @@ function pintarPantallaLetra() {
     p.dataset.i = i;
     cuerpo.appendChild(p);
   });
+  cuerpo.scrollTop = 0; // canción nueva: empezar desde arriba, no donde quedó la anterior
 }
 
 // Resalta la línea que suena (pos en ms). Se adelanta 0,2 s para que no se sienta tarde.
@@ -1064,24 +1074,21 @@ function moverLetra(pos, forzar) {
     cuerpo.querySelectorAll('p.actual').forEach(p => p.classList.remove('actual'));
     const p = cuerpo.querySelector(`p[data-i="${i}"]`);
     if (p) { p.classList.add('actual'); p.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    else cuerpo.scrollTo({ top: 0, behavior: 'smooth' }); // intro: todavía no se canta nada
   }
 }
 
-function abrirPantallaLetra() { pantallaLetra = true; pintarLetra(); }
-function cerrarPantallaLetra() { pantallaLetra = false; pintarLetra(); }
+function cerrarPantallaLetra() { cambiarModoLetra('cerrada'); }
 
-$('#btn-letra').innerHTML = icono('letra', 22);
+// Un solo botón: sincronizada mini → completa → cerrada; fija (sin franja): completa ↔ cerrada
+$('#btn-letra').innerHTML = icono('letra', 24);
 $('#btn-letra').onclick = () => {
   if (!letra) return;
-  if (letra.estado === 'fija') return abrirPantallaLetra();
-  letraVisible = !letraVisible;
-  try { localStorage.setItem('oido-letra', letraVisible ? '1' : '0'); } catch {}
-  pintarLetra();
+  const siguiente = letra.estado === 'sinc'
+    ? { mini: 'completa', completa: 'cerrada', cerrada: 'mini' }[pantallaLetra ? 'completa' : modoLetra] || 'mini'
+    : pantallaLetra ? 'cerrada' : 'completa';
+  cambiarModoLetra(siguiente);
 };
-$('#franja .exp').innerHTML = icono('expandir', 16);
-$('#franja').onclick = abrirPantallaLetra;
-$('#cerrar-letra').innerHTML = icono('abajo', 26);
-$('#cerrar-letra').onclick = cerrarPantallaLetra;
 
 // ---------- Tema: eliges un tono y se calculan fondo, texto y acento ----------
 const TONOS = [175, 35, 350, 265, 130, 210];
