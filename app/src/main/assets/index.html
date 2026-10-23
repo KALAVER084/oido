@@ -136,9 +136,18 @@
   #letra-cuerpo.sincronizando p.elegida { color: var(--acento); opacity: 1; font-weight: 700; transform: scale(1.06); }
   #elegida { margin: 0; text-align: center; color: var(--texto); font-weight: 600; font-size: .95rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pie-sync { position: relative; z-index: 2; background: var(--fondo); display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .5rem 1rem .9rem; }
-  .pie-sync:has(> [hidden] + [hidden]) { padding: 0; }
+  .pie-sync:not(:has(> :not([hidden]))) { padding: 0; }
   #pista-sync { margin: 0; text-align: center; color: var(--suave); font-size: .85rem; }
   #pista-sync b { color: var(--acento); }
+  #panel-fino { width: 100%; max-width: 30rem; background: var(--sup); border-radius: 14px; padding: .8rem; }
+  .tit-fino { margin: 0 0 .6rem; text-align: center; color: var(--suave); font-size: .8rem; }
+  .fila-fino { display: flex; align-items: center; justify-content: center; gap: .4rem; }
+  .fila-fino button { border: 1px solid var(--linea); border-radius: 999px; padding: .5rem .7rem; font-size: .9rem; white-space: nowrap; }
+  .fila-fino button:active { background: var(--tinte); }
+  #valor-fino { min-width: 5.2rem; text-align: center; font-weight: 700; font-size: 1.1rem; color: var(--acento); font-variant-numeric: tabular-nums; }
+  .lab-fino { display: flex; justify-content: space-between; margin: .35rem .2rem 0; color: var(--suave); font-size: .72rem; }
+  .acc-fino { display: flex; justify-content: space-between; align-items: center; margin-top: .7rem; }
+  .acc-fino .primario { padding: .4rem 1.3rem; border-radius: 999px; }
   #btn-ahora { font-size: 1.15rem; padding: .7rem 2.6rem; border-radius: 999px; }
   #btn-ahora:active { transform: scale(.96); }
   .canal .ajustada { color: var(--acento); }
@@ -215,6 +224,21 @@
     <p id="pista-sync" hidden>Desliza hasta que se pinte la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse</p>
     <p id="elegida" hidden></p>
     <button id="btn-ahora" class="primario" hidden>¡Ahora!</button>
+    <div id="panel-fino" hidden>
+      <p class="tit-fino">Ajuste fino · la letra sigue sonando mientras ajustas</p>
+      <div class="fila-fino">
+        <button data-d="-1000" aria-label="Adelantar la letra 1 segundo">« 1 s</button>
+        <button data-d="-250" aria-label="Adelantar la letra 0,25 segundos">‹ 0,25</button>
+        <span id="valor-fino"></span>
+        <button data-d="250" aria-label="Atrasar la letra 0,25 segundos">0,25 ›</button>
+        <button data-d="1000" aria-label="Atrasar la letra 1 segundo">1 s »</button>
+      </div>
+      <div class="lab-fino"><span>La letra va tarde</span><span>La letra va adelantada</span></div>
+      <div class="acc-fino">
+        <button id="fino-cero" class="enlace">⟳ Sincronizar desde cero</button>
+        <button id="fino-listo" class="primario">Listo</button>
+      </div>
+    </div>
   </div>
 </section>
 <iframe id="karaoke-marco" src="karaoke.html" hidden title="Karaoke"></iframe>
@@ -853,6 +877,7 @@ window.__restaurar = c => {
 // Botón "atrás" de Android
 window.__atras = () => {
   if (menu.classList.contains('abierto')) { cerrarMenu(); return true; }
+  if (sincronizando || ajustandoFino) { sincronizando = false; ajustandoFino = false; pintarLetra(); return true; }
   if (pantallaLetra) { cerrarPantallaLetra(); return true; }
   if ($('#panel-tema').classList.contains('abierto')) { $('#panel-tema').classList.remove('abierto'); return true; }
   if (listaPorId(vista)) { vista = 'mislistas'; pintar(); return true; }
@@ -971,6 +996,7 @@ let posMarca = 0;             // cuándo llegó ese aviso (para calcular la posi
 let posSonando = false;
 const posAhora = () => posActual + (posSonando ? Date.now() - posMarca : 0);
 let sincronizando = false;    // modo "sync": deslizar la letra hasta la línea que suena
+let ajustandoFino = false;    // panel de ajuste fino (± 0,25 s / ± 1 s)
 
 // Ajuste de tiempo por video: { idDelVideo: milisegundos }. Se recuerda para siempre.
 let ajustes = {};
@@ -1065,6 +1091,7 @@ function actualizarLetra(s) {
   if (id !== (letra ? letra.id : null)) {
     lineaActual = -1;
     sincronizando = false;
+    ajustandoFino = false;
     tituloLetra = it ? it.titulo : '';
     if (!id) letra = null;
     else if (cacheLetra.has(id)) letra = conAjuste(id, cacheLetra.get(id));
@@ -1112,10 +1139,12 @@ function cambiarModoLetra(modo) {
 
 function pintarAccionesLetra() {
   const conTiempos = !!(letra && letra.lineas && letra.lineas.length);
-  $('#btn-sync').hidden = !conTiempos || sincronizando;
+  $('#btn-sync').hidden = !conTiempos || sincronizando || ajustandoFino;
   $('#btn-sync').classList.toggle('ajustado', !!(letra && letra.ajustada));
   $('#btn-sync').title = letra && letra.ajustada ? 'Volver a sincronizar' : 'Sincronizar letra';
-  $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando;
+  $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando || ajustandoFino;
+  $('#panel-fino').hidden = !ajustandoFino;
+  if (ajustandoFino) pintarValorFino();
   $('#btn-cancelar-sync').hidden = !sincronizando;
   $('#pista-sync').hidden = !sincronizando;
   $('#elegida').hidden = !sincronizando;
@@ -1175,7 +1204,27 @@ function moverLetra(pos, forzar) {
   }
 }
 
-function cerrarPantallaLetra() { sincronizando = false; cambiarModoLetra('cerrada'); }
+function cerrarPantallaLetra() { sincronizando = false; ajustandoFino = false; cambiarModoLetra('cerrada'); }
+
+// ---------- Ajuste fino: mover toda la letra unos milisegundos, con la canción sonando ----------
+const segundosFino = ms => (ms >= 0 ? '+' : '−') + (Math.abs(ms) / 1000).toFixed(2).replace('.', ',') + ' s';
+function pintarValorFino() {
+  $('#valor-fino').textContent = segundosFino(letra ? (ajustes[letra.id] || 0) : 0);
+}
+function moverFino(delta) {
+  if (!letra || !letra.lineas) return;
+  ajustes[letra.id] = (ajustes[letra.id] || 0) + delta;
+  guardarAjustes();
+  letra = conAjuste(letra.id, cacheLetra.get(letra.id) || letra);
+  // Mismas líneas, otros tiempos: basta con volver a ubicar la actual (sin redibujar)
+  lineaActual = -2;
+  moverLetra(posAhora());
+  pintarValorFino();
+  pintar(); // la marca "letra ajustada" en la lista
+}
+document.querySelectorAll('#panel-fino [data-d]').forEach(b => { b.onclick = () => moverFino(+b.dataset.d); });
+$('#fino-listo').onclick = () => { ajustandoFino = false; pintarAccionesLetra(); };
+$('#fino-cero').onclick = () => { ajustandoFino = false; sincronizando = true; pintarLetra(); };
 
 // ---------- Sincronizar a mano: poner en la guía la línea que viene y tocar "¡Ahora!" ----------
 const REACCION_MS = 150;   // lo que tardamos en reaccionar al oír la línea
@@ -1244,7 +1293,10 @@ function marcarAhora() {
 }
 
 $('#btn-sync').innerHTML = icono('sync', 20);
-$('#btn-sync').onclick = () => { sincronizando = true; pintarLetra(); };
+$('#btn-sync').onclick = () => {
+  if (letra && letra.estado === 'sinc') { ajustandoFino = true; pintarAccionesLetra(); }
+  else { sincronizando = true; pintarLetra(); }
+};
 $('#btn-deshacer').innerHTML = icono('deshacer', 20);
 $('#btn-deshacer').onclick = () => {
   if (!letra) return;
