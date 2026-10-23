@@ -130,18 +130,20 @@
   #btn-sync, #btn-deshacer { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; color: var(--suave); }
   #btn-sync.ajustado { color: var(--acento); background: var(--tinte); }
   #btn-cancelar-sync { border: 1px solid var(--linea); color: var(--suave); border-radius: 999px; padding: .3rem .9rem; font-size: .9rem; }
-  .zona-letra { position: relative; flex: 1; min-height: 0; display: flex; }
-  #guia { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--acento); pointer-events: none; }
+  .zona-letra { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  #guia { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--acento); pointer-events: none; z-index: 1; }
   #guia span { position: absolute; right: 1rem; top: -.75rem; background: var(--fondo); color: var(--acento); font-size: .75rem; padding: 0 .35rem; }
   #letra-cuerpo.sincronizando { padding-top: 45vh; padding-bottom: 45vh; }
   #letra-cuerpo.sincronizando p { color: var(--texto); }
-  .pie-sync { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .3rem 1rem .9rem; }
+  .pie-sync { position: relative; z-index: 2; background: var(--fondo); display: flex; flex-direction: column; align-items: center; gap: .5rem; padding: .5rem 1rem .9rem; }
+  .pie-sync:has(> [hidden] + [hidden]) { padding: 0; }
   #pista-sync { margin: 0; text-align: center; color: var(--suave); font-size: .85rem; }
   #pista-sync b { color: var(--acento); }
   #btn-ahora { font-size: 1.15rem; padding: .7rem 2.6rem; border-radius: 999px; }
   #btn-ahora:active { transform: scale(.96); }
   .canal .ajustada { color: var(--acento); }
-  #letra-cuerpo { flex: 1; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
+  /* La letra vive encerrada en su zona: lo que sobra se recorta y se desplaza por dentro */
+  #letra-cuerpo { position: absolute; inset: 0; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
   #letra-cuerpo p { margin: .9rem 0; font-size: 1.25rem; line-height: 1.35; color: var(--suave); transition: color .25s, transform .25s; }
   #letra-cuerpo p.actual { color: var(--acento); font-weight: 700; transform: scale(1.04); }
   #letra-cuerpo.fija { padding: 1rem 1.25rem 2rem; text-align: left; }
