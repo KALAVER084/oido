@@ -1348,7 +1348,8 @@ function karaokeCancion() {
 }
 // Teléfono en horizontal + letra a pantalla completa = modo karaoke (solo Android)
 function actualizarKaraokeLocal() {
-  const activo = esAndroid && pantallaLetra && horizontal.matches;
+  // Con una tele conectada el karaoke va en la tele: el teléfono sigue siendo el control
+  const activo = esAndroid && pantallaLetra && horizontal.matches && !pantallaExterna;
   const antes = document.body.classList.contains('karaoke');
   document.body.classList.toggle('karaoke', activo);
   $('#karaoke-marco').hidden = !activo;
@@ -1364,6 +1365,7 @@ $('#karaoke-marco').addEventListener('load', karaokeCancion);
 horizontal.addEventListener('change', actualizarKaraokeLocal);
 window.__pantallaExterna = conectada => {
   pantallaExterna = conectada;
+  actualizarKaraokeLocal();
   if (conectada) enviarKaraoke(datosKaraoke());
 };
 

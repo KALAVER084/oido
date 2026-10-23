@@ -23,7 +23,8 @@
     background: var(--fondo); color: var(--texto); overflow: hidden;
     font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  #k { position: relative; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
+  #fondo { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  #k { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
   #tit { font-size: 3.4vmin; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70vw; }
   #art { font-size: 2.6vmin; color: var(--suave); }
@@ -33,14 +34,16 @@
   .vista { flex: 1; min-height: 0; display: none; }
   .vista.visible { display: flex; }
 
-  /* Letra sincronizada: cuatro líneas, la actual grande */
-  #lineas { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2.4vh; }
-  #lineas div { max-width: 92vw; transition: opacity .3s ease, transform .3s ease; }
-  .pas { color: var(--suave); font-size: 4.2vmin; opacity: .55; }
-  .act { color: var(--acento); font-size: 7.6vmin; font-weight: 700; line-height: 1.15; }
-  .sig { font-size: 5vmin; }
-  .sig2 { color: var(--suave); font-size: 4.2vmin; }
-  #lineas.cambio div { opacity: 0; transform: translateY(1.5vh); }
+  /* Letra sincronizada: un rollo que sube suavemente; la línea actual queda al centro, grande */
+  #lineas { position: relative; overflow: hidden; }
+  #rollo { position: absolute; left: 0; right: 0; top: 0; text-align: center; will-change: transform;
+           transition: transform .55s cubic-bezier(.22, .7, .25, 1); }
+  #rollo.sin-animacion { transition: none; }
+  #rollo .l { max-width: 70vw; margin: 0 auto; padding: 2.2vh 0; font-size: 5.2vmin; line-height: 1.25;
+              color: var(--texto); opacity: .45; transform-origin: center;
+              transition: opacity .4s ease, color .4s ease, transform .4s ease; }
+  #rollo .l.pasada { opacity: .22; }
+  #rollo .l.actual { color: var(--acento); opacity: 1; font-weight: 700; transform: scale(1.32); }
 
   /* Letra fija: texto completo que se desplaza con el avance de la canción */
   #fija { overflow: hidden; justify-content: center; }
@@ -59,6 +62,7 @@
 </style>
 </head>
 <body>
+<canvas id="fondo" aria-hidden="true"></canvas>
 <div id="k">
   <div class="top">
     <div><div id="tit"></div><div id="art"></div></div>
@@ -68,12 +72,7 @@
     </div>
   </div>
 
-  <div id="lineas" class="vista">
-    <div class="pas"></div>
-    <div class="act"></div>
-    <div class="sig"></div>
-    <div class="sig2"></div>
-  </div>
+  <div id="lineas" class="vista"><div id="rollo"></div></div>
 
   <div id="fija" class="vista">
     <div id="fija-nota">Letra sin sincronizar</div>
@@ -111,7 +110,7 @@ function pintar() {
   $('#solo-tit').textContent = c.titulo || 'Oído';
   $('#solo-art').textContent = c.canal || '';
   const est = c.letra && c.letra.estado;
-  if (est === 'sinc') mostrar('lineas');
+  if (est === 'sinc') { mostrar('lineas'); construirRollo(c.letra.lineas || []); }
   else if (est === 'fija') { mostrar('fija'); $('#fija-texto').textContent = c.letra.texto || ''; $('#fija').scrollTop = 0; }
   else mostrar('solo');
   // Cuando hay letra, el título va arriba; sin letra, va grande en el centro
@@ -135,27 +134,178 @@ function mover() {
   let i = -1;
   for (let k = 0; k < ls.length && ls[k].t <= pos + 200; k++) i = k; // 0,2 s de adelanto
   if (i === actual) return;
-  const texto = k => (k >= 0 && ls[k]) ? ls[k].texto : '';
-  const poner = () => {
-    $('.pas').textContent = texto(i - 1);
-    $('.act').textContent = i >= 0 ? texto(i) : '♪';
-    $('.sig').textContent = texto(i + 1);
-    $('.sig2').textContent = texto(i + 2);
-  };
-  const lineas = $('#lineas');
-  if (actual === -2) { poner(); } // primera vez: sin animación
-  else {
-    lineas.classList.add('cambio');
-    setTimeout(() => { poner(); lineas.classList.remove('cambio'); }, 160);
-  }
+  const primera = actual === -2;
   actual = i;
+  const els = $('#rollo').children;
+  for (let k = 0; k < els.length; k++) {
+    els[k].classList.toggle('actual', k === i);
+    els[k].classList.toggle('pasada', k < i);
+  }
+  centrar(!primera);
+  if (!primera && i >= 0) Fondo.destello();
 }
+
+// Arma todas las líneas una debajo de otra
+function construirRollo(ls) {
+  const r = $('#rollo');
+  r.innerHTML = '';
+  for (const l of ls) {
+    const d = document.createElement('div');
+    d.className = 'l';
+    d.textContent = l.texto || '♪';
+    r.appendChild(d);
+  }
+}
+
+// Desliza el rollo para que la línea actual (o la primera, en la intro) quede al centro
+function centrar(animado) {
+  const r = $('#rollo');
+  const ref = r.children[Math.max(0, actual)];
+  if (!ref) return;
+  const alto = $('#lineas').clientHeight;
+  const y = alto / 2 - (ref.offsetTop + ref.offsetHeight / 2);
+  r.classList.toggle('sin-animacion', !animado);
+  r.style.transform = `translateY(${y}px)`;
+  if (!animado) requestAnimationFrame(() => r.classList.remove('sin-animacion'));
+}
+window.addEventListener('resize', () => centrar(false));
 
 function recibir(m) {
   if (!m || typeof m !== 'object') return;
-  if (m.tipo === 'cancion') { cancion = m; pintar(); }
+  if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
 }
+// ---------- Fondo animado: un estilo al azar por canción, con los colores del tema ----------
+const Fondo = (() => {
+  const cv = $('#fondo'), x = cv.getContext('2d');
+  let W = 0, H = 0, M = 0, ef = -1, ps = [], extra = [], chispas = [], t = 0, ultimo = 0, clave = null;
+  let A = '83,234,221', T = '230,240,239', C = '160,240,232';   // acento, texto, acento claro (RGB)
+  const r = (a, b) => a + Math.random() * (b - a);
+
+  // "hsl(175 78% 62%)" -> "r,g,b"
+  function rgb(hsl, ajusteL) {
+    const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/.exec(hsl || '');
+    if (!m) return null;
+    let h = +m[1], s = +m[2] / 100, l = (ajusteL ?? +m[3]) / 100;
+    const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+    return `${f(0)},${f(8)},${f(4)}`;
+  }
+  function tamano() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);   // en la tele no hace falta más
+    W = cv.width = Math.round(innerWidth * dpr);
+    H = cv.height = Math.round(innerHeight * dpr);
+    M = Math.min(W, H);
+  }
+  function luz(px, py, rad, c, a) {
+    if (a <= 0 || rad <= 0) return;
+    const g = x.createRadialGradient(px, py, 0, px, py, rad);
+    g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(.4, `rgba(${c},${a * .35})`); g.addColorStop(1, `rgba(${c},0)`);
+    x.fillStyle = g; x.beginPath(); x.arc(px, py, rad, 0, 6.283); x.fill();
+  }
+  const gota = () => ({ x: Math.random(), y: Math.random(), s: r(.004, .014), vy: 0, rastro: [] });
+
+  function crear() {
+    ps = []; extra = [];
+    if (ef === 0) for (let i = 0; i < 40; i++) ps.push({ x: Math.random(), y: Math.random(), s: r(.012, .04), v: r(.3, 1), p: r(0, 6.3), c: Math.random() < .75 ? 'A' : 'T' });
+    if (ef === 1) for (let i = 0; i < 12; i++) ps.push({ x: Math.random(), y: r(.1, .95), s: r(.07, .15), p: r(0, 6.3), v: r(.4, .8), c: Math.random() < .5 ? 'C' : 'A', dx: r(-1, 1) });
+    if (ef === 3) { for (let i = 0; i < 8; i++) extra.push({ x: Math.random(), y: Math.random(), s: r(.1, .22), c: Math.random() < .6 ? 'A' : 'T', p: r(0, 6.3) }); for (let i = 0; i < 60; i++) ps.push(gota()); }
+    if (ef === 4) for (let i = 0; i < 50; i++) ps.push({ x: Math.random(), y: Math.random(), s: r(.006, .022), v: r(.3, 1), p: r(0, 6.3), c: Math.random() < .6 ? 'T' : 'A' });
+  }
+  const col = c => c === 'A' ? A : c === 'T' ? T : C;
+
+  function dibujar() {
+    x.clearRect(0, 0, W, H);
+    if (ef === 0) for (const p of ps) {           // luciérnagas
+      p.x += Math.sin(t * .3 + p.p) * .0008 * p.v; p.y -= .0005 * p.v; if (p.y < -.05) p.y = 1.05;
+      luz(p.x * W, p.y * H, p.s * M, col(p.c), .15 + .4 * (.5 + .5 * Math.sin(t * 1.1 * p.v + p.p)));
+    }
+    if (ef === 1) for (const p of ps) {           // bokeh cálido
+      p.x += p.dx * .00016; if (p.x < -.1) p.x = 1.1; if (p.x > 1.1) p.x = -.1;
+      const f = .6 + .4 * Math.sin(t * .45 * p.v + p.p);
+      luz(p.x * W, p.y * H, p.s * M, col(p.c), .22 * f);
+      x.strokeStyle = `rgba(${col(p.c)},${.06 * f})`; x.lineWidth = 2; x.beginPath(); x.arc(p.x * W, p.y * H, p.s * M * .62, 0, 6.283); x.stroke();
+    }
+    if (ef === 2) {                               // ondas de agua
+      if (Math.random() < .05) ps.push({ x: r(.05, .95), y: r(.15, .9), k: 0 });
+      ps = ps.filter(p => p.k < 1);
+      for (const p of ps) {
+        p.k += .012;
+        for (let j = 0; j < 3; j++) {
+          const kk = p.k - j * .12; if (kk <= 0) continue;
+          x.strokeStyle = `rgba(${A},${.45 * (1 - kk)})`; x.lineWidth = 1.6;
+          x.beginPath(); x.ellipse(p.x * W, p.y * H, kk * .32 * M, kk * .12 * M, 0, 0, 6.283); x.stroke();
+        }
+        luz(p.x * W, p.y * H, .05 * M, A, .3 * (1 - p.k));
+      }
+    }
+    if (ef === 3) {                               // lluvia en la ventana
+      for (const b of extra) luz(b.x * W, b.y * H, b.s * M, col(b.c), .16 + .05 * Math.sin(t * .5 + b.p));
+      for (const g of ps) {
+        if (!g.vy && Math.random() < .003 && g.s > .008) g.vy = r(.003, .008);
+        if (g.vy) { g.rastro.push({ x: g.x, y: g.y, a: .5 }); g.y += g.vy; g.x += Math.sin(t * 3 + g.y * 40) * .0008; if (g.y > 1.05) Object.assign(g, gota(), { y: -.02 }); }
+        g.rastro = g.rastro.filter(q => (q.a -= .008) > 0);
+        for (const q of g.rastro) { x.fillStyle = `rgba(${T},${q.a * .25})`; x.beginPath(); x.arc(q.x * W, q.y * H, g.s * M * .25, 0, 6.283); x.fill(); }
+        const px = g.x * W, py = g.y * H, rr = g.s * M;
+        x.fillStyle = `rgba(${T},.08)`; x.beginPath(); x.arc(px, py, rr, 0, 6.283); x.fill();
+        x.strokeStyle = `rgba(${T},.28)`; x.lineWidth = 1; x.stroke();
+        x.fillStyle = `rgba(${C},.55)`; x.beginPath(); x.arc(px - rr * .3, py - rr * .35, rr * .28, 0, 6.283); x.fill();
+      }
+    }
+    if (ef === 4) for (const p of ps) {           // polvo de luz
+      p.y += .0012 * p.v; p.x += Math.sin(t * .6 + p.p) * .001; if (p.y > 1.05) { p.y = -.05; p.x = Math.random(); }
+      luz(p.x * W, p.y * H, p.s * M, col(p.c), .25 + .2 * Math.sin(t * 2 * p.v + p.p));
+    }
+    if (ef === 5) for (let k = 0; k < 3; k++) {   // aurora
+      const c = k === 1 ? T : A;
+      for (let i = 0; i <= 40; i++) {
+        const u = i / 40, yy = .3 + k * .12 + Math.sin(u * 5 + t * .5 + k * 1.7) * .06 + Math.sin(u * 11 - t * .3) * .02;
+        luz(u * W, yy * H, .09 * M, c, .06 + .03 * Math.sin(t + k + u * 3));
+      }
+    }
+    // Destello de la línea nueva
+    chispas = chispas.filter(e => (e.vida -= .024) > 0);
+    for (const e of chispas) { e.x += e.vx; e.y += e.vy; luz(e.x * W, e.y * H, e.s * M * 2, A, .6 * e.vida); }
+  }
+
+  // Máximo 30 cuadros por segundo; si el karaoke no está a la vista, no dibuja
+  function bucle(ahora) {
+    requestAnimationFrame(bucle);
+    if (document.hidden || ahora - ultimo < 33) return;
+    ultimo = ahora;
+    if (innerWidth === 0 || innerHeight === 0) return;
+    if (W !== Math.round(innerWidth * Math.min(window.devicePixelRatio || 1, 1.5))) tamano();
+    t += .033;
+    if (ef >= 0) dibujar();
+  }
+  addEventListener('resize', tamano);
+  requestAnimationFrame(bucle);
+
+  return {
+    cancion(m) {
+      if (m.tema) {
+        const h = /hsl\(\s*([\d.]+)/.exec(m.tema['--acento'] || '');
+        A = rgb(m.tema['--acento']) || A;
+        T = rgb(m.tema['--texto']) || T;
+        if (h) C = rgb(`hsl(${h[1]} 70% 78%)`) || C;
+      }
+      const k = (m.titulo || '') + '|' + (m.canal || '');
+      if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): mismo fondo
+      clave = k;
+      let n; do { n = Math.floor(Math.random() * 6); } while (n === ef);
+      ef = n;
+      crear();
+    },
+    destello() {
+      for (let i = 0; i < 14; i++) {
+        const a = r(0, 6.3), v = r(.004, .012);
+        chispas.push({ x: .5, y: .5, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 1.6, s: r(.008, .02), vida: 1 });
+      }
+    },
+    get estilo() { return ef; },
+  };
+})();
+
 window.__karaoke = recibir;                                // tele: lo llama Android
 window.addEventListener('message', e => recibir(e.data));  // teléfono: lo manda la app
 </script>
