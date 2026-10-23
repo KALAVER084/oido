@@ -21,6 +21,8 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -49,11 +51,77 @@ class MainActivity : ComponentActivity() {
     private val trabajo = Executors.newFixedThreadPool(3)
     private val archivoListas by lazy { File(filesDir, "listas.json") }
     private var ultimaRevision = 0L
+    private val http by lazy { OkHttpClient() }
+
+    // ---------- Archivos de respaldo de listas ----------
+    private var pendienteGuardar: Pair<String, String>? = null   // (petición, texto)
+    private var pendienteAbrir: String? = null                   // petición
+    private var importacionPendiente: String? = null             // llegó con "Abrir con Oído"
+
+    /** Ventana de Android "Guardar en…" (Descargas, Drive, etc.). */
+    private val guardarDocumento = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        val (req, texto) = pendienteGuardar ?: return@registerForActivityResult
+        pendienteGuardar = null
+        if (uri == null) { responderJs(req, true, "false"); return@registerForActivityResult }
+        trabajo.execute {
+            try {
+                contentResolver.openOutputStream(uri)?.use { it.write(texto.toByteArray()) }
+                responderJs(req, true, "true")
+            } catch (e: Exception) {
+                responderJs(req, false, JSONObject.quote(e.message ?: "error"))
+            }
+        }
+    }
+
+    /** Ventana para elegir el archivo a importar. */
+    private val abrirDocumento = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val req = pendienteAbrir ?: return@registerForActivityResult
+        pendienteAbrir = null
+        if (uri == null) { responderJs(req, true, "null"); return@registerForActivityResult }
+        trabajo.execute {
+            val texto = runCatching { leerTexto(uri) }.getOrNull()
+            if (texto == null) responderJs(req, false, JSONObject.quote("No se pudo leer"))
+            else responderJs(req, true, JSONObject.quote(texto))
+        }
+    }
+
+    private fun leerTexto(uri: Uri): String? =
+        contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+
+    private fun responderJs(req: String, ok: Boolean, datos: String) =
+        js("window.__respuesta(${JSONObject.quote(req)}, $ok, $datos)")
+
+    /** "Abrir con Oído" o "Compartir con Oído" desde WhatsApp, el correo o Archivos. */
+    private fun recibirArchivo(recibido: Intent?) {
+        val i = recibido ?: return
+        val uri: Uri = when (i.action) {
+            Intent.ACTION_VIEW -> i.data
+            Intent.ACTION_SEND -> uriAdjunto(i)
+            else -> null
+        } ?: return
+        trabajo.execute {
+            val texto = runCatching { leerTexto(uri) }.getOrNull() ?: return@execute
+            main.post {
+                if (paginaLista) web.evaluateJavascript("window.__importar(${JSONObject.quote(texto)})", null)
+                else importacionPendiente = texto
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun uriAdjunto(i: Intent): Uri? =
+        if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        else i.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        recibirArchivo(intent)
+    }
 
     private val reloj = object : Runnable {
         override fun run() {
             enviarEstado()
-            main.postDelayed(this, 500)
+            main.postDelayed(this, 250) // 4 veces por segundo: la letra va al ritmo
         }
     }
 
@@ -99,6 +167,10 @@ class MainActivity : ComponentActivity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 paginaLista = true
+                importacionPendiente?.let {
+                    web.evaluateJavascript("window.__importar(${JSONObject.quote(it)})", null)
+                    importacionPendiente = null
+                }
                 enviarCola()
                 enviarEstado()
                 revisarActualizacion()
@@ -106,6 +178,7 @@ class MainActivity : ComponentActivity() {
         }
         web.addJavascriptInterface(Puente(), "OidoNativo")
         web.loadUrl("file:///android_asset/index.html")
+        recibirArchivo(intent)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -172,7 +245,7 @@ class MainActivity : ComponentActivity() {
                     .url("https://api.github.com/repos/$REPO_DESCARGAS/releases/latest")
                     .header("Accept", "application/vnd.github+json")
                     .build()
-                OkHttpClient().newCall(pedido).execute().use { r ->
+                http.newCall(pedido).execute().use { r ->
                     if (!r.isSuccessful) return@use
                     val j = JSONObject(r.body?.string() ?: return@use)
                     val ultima = j.optString("tag_name").removePrefix("v")
@@ -261,8 +334,7 @@ class MainActivity : ComponentActivity() {
     // ---------- Desde la interfaz ----------
 
     inner class Puente {
-        private fun responder(req: String, ok: Boolean, datos: String) =
-            js("window.__respuesta(${JSONObject.quote(req)}, $ok, $datos)")
+        private fun responder(req: String, ok: Boolean, datos: String) = responderJs(req, ok, datos)
 
         private fun enSegundoPlano(req: String, tarea: () -> String) = trabajo.execute {
             try {
@@ -301,6 +373,53 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun abrirEnlace(url: String) {
             if (!url.startsWith("https://github.com/")) return
             main.post { runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
+        }
+
+        /** Letras: pide a LRCLIB (solo ese sitio). Devuelve el texto, o null si no existe. */
+        @JavascriptInterface fun pedir(req: String, url: String) = enSegundoPlano(req) {
+            require(url.startsWith("https://lrclib.net/api/")) { "Dirección no permitida" }
+            val pedido = okhttp3.Request.Builder().url(url)
+                .header("User-Agent", "Oido (https://github.com/KALAVER084/oido)").build()
+            http.newCall(pedido).execute().use { r ->
+                when {
+                    r.code == 404 -> "null"
+                    !r.isSuccessful -> throw IllegalStateException("LRCLIB respondió ${r.code}")
+                    else -> JSONObject.quote(r.body?.string() ?: "")
+                }
+            }
+        }
+
+        /** Guardar copia de las listas: abre "Guardar en…". */
+        @JavascriptInterface fun guardarArchivo(req: String, texto: String, nombre: String) {
+            main.post {
+                pendienteGuardar = req to texto
+                guardarDocumento.launch(nombre)
+            }
+        }
+
+        /** Importar: abre el selector de archivos. */
+        @JavascriptInterface fun abrirArchivo(req: String) {
+            main.post {
+                pendienteAbrir = req
+                abrirDocumento.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*"))
+            }
+        }
+
+        /** Enviar las listas por WhatsApp, correo, etc. */
+        @JavascriptInterface fun compartirArchivo(texto: String, nombre: String) {
+            main.post {
+                runCatching {
+                    val carpeta = File(cacheDir, "compartir").apply { mkdirs() }
+                    val archivo = File(carpeta, nombre).apply { writeText(texto) }
+                    val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.archivos", archivo)
+                    val enviar = Intent(Intent.ACTION_SEND)
+                        .setType("application/json")
+                        .putExtra(Intent.EXTRA_STREAM, uri)
+                        .putExtra(Intent.EXTRA_SUBJECT, "Mis listas de Oído")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    startActivity(Intent.createChooser(enviar, "Enviar mis listas"))
+                }
+            }
         }
 
         /** Copia un enlace al portapapeles (botón de compartir). */

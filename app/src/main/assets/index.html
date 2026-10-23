@@ -37,6 +37,7 @@
   #btn-tema { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; color: var(--suave); border-radius: 50%; }
   #btn-tema:hover { color: var(--acento); }
 
+  .respaldo { display: flex; gap: .4rem 1.2rem; flex-wrap: wrap; width: 100%; margin-top: .3rem; }
   #actualizacion {
     display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
     background: var(--tinte); color: var(--texto); border-radius: 12px; padding: .6rem .8rem; margin-bottom: .8rem; font-size: .9rem;
@@ -106,6 +107,30 @@
   #menu button:hover { background: var(--tinte); }
   #menu input { width: 100%; margin-top: .3rem; }
 
+  [hidden] { display: none !important; }
+  .fila-titulo { display: flex; align-items: center; gap: .5rem; }
+  .fila-titulo #ahora { flex: 1; min-width: 0; }
+  #btn-letra { width: 2.2rem; height: 2.2rem; display: grid; place-items: center; color: var(--suave); flex: none; }
+  #btn-letra.activo { color: var(--acento); }
+  #franja {
+    display: flex; align-items: flex-start; gap: .5rem; width: 100%; text-align: left;
+    border-left: 2px solid var(--acento); border-radius: 0; padding: .2rem .5rem; margin: .1rem 0 .5rem;
+  }
+  #franja .lineas { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #franja .l1 { color: var(--acento); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #franja .l2 { color: var(--suave); font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+  #franja .exp { color: var(--suave); padding-top: .15rem; }
+  body.letra-abierta header, body.letra-abierta main { display: none; }
+  #pantalla-letra { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .cab-letra { display: flex; align-items: center; gap: .5rem; padding: .8rem 1rem .4rem; }
+  #cerrar-letra { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; color: var(--suave); flex: none; }
+  #letra-titulo { color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #letra-cuerpo { flex: 1; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
+  #letra-cuerpo p { margin: .9rem 0; font-size: 1.25rem; line-height: 1.35; color: var(--suave); transition: color .25s, transform .25s; }
+  #letra-cuerpo p.actual { color: var(--acento); font-weight: 700; transform: scale(1.04); }
+  #letra-cuerpo.fija { padding: 1rem 1.25rem 2rem; text-align: left; }
+  #letra-cuerpo .texto-fijo { white-space: pre-wrap; color: var(--texto); font-size: 1.1rem; }
+  #letra-cuerpo .aviso-letra { font-size: .9rem; color: var(--suave); }
   #aviso {
     position: fixed; left: 50%; bottom: 9.5rem; transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
     background: var(--texto); color: var(--fondo); padding: .55rem 1rem; border-radius: 999px; font-size: .9rem; font-weight: 600;
@@ -154,12 +179,26 @@
     <ol id="lista"></ol>
   </div>
 </main>
+<section id="pantalla-letra" hidden>
+  <div class="ancho cab-letra">
+    <button id="cerrar-letra" aria-label="Cerrar letra"></button>
+    <span id="letra-titulo"></span>
+  </div>
+  <div id="letra-cuerpo" class="ancho"></div>
+</section>
 <div id="menu" role="menu"></div>
 <div id="aviso" role="status" aria-live="polite"></div>
 <section id="reproductor">
   <div class="ancho">
-    <p id="ahora"></p>
+    <div class="fila-titulo">
+      <p id="ahora"></p>
+      <button id="btn-letra" hidden aria-label="Letra"></button>
+    </div>
     <p id="origen"></p>
+    <button id="franja" hidden aria-label="Ver letra en pantalla completa">
+      <span class="lineas"><span class="l1"></span><span class="l2"></span></span>
+      <span class="exp"></span>
+    </button>
     <div class="tiempo">
       <span id="t-pos">0:00</span>
       <input id="progreso" type="range" min="0" max="0" value="0" step="1000" aria-label="Posición">
@@ -199,6 +238,10 @@ if (window.OidoNativo) {
     guardarListas: async l => OidoNativo.guardarListas(JSON.stringify(l)),
     copiar: async t => OidoNativo.copiar(t),
     abrirEnlace: url => OidoNativo.abrirEnlace(url),
+    pedir: url => llamar('pedir', url),
+    guardarArchivo: (texto, nombre) => llamar('guardarArchivo', texto, nombre),
+    abrirArchivo: () => llamar('abrirArchivo'),
+    compartirArchivo: (texto, nombre) => OidoNativo.compartirArchivo(texto, nombre),
   };
   reproductor = OidoNativo;
   window.alCambiarFondo = color => OidoNativo.colorFondo(color);
@@ -317,6 +360,9 @@ const ICONOS = {
   edit: '<path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/>',
   tema: '<path d="M12 21a9 9 0 1 1 9-9c0 2.5-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A1 1 0 0 1 12 21z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="16" cy="8.5" r="1.2" fill="currentColor"/>',
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
+  letra: '<path d="M5 6h14M5 12h9M5 18h12"/>',
+  expandir: '<path d="M15 4h5v5M20 4l-6 6M9 20H4v-5M4 20l6-6"/>',
+  abajo: '<path d="M6 9l6 6 6-6"/>',
   enlace: '<path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.6.6M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.6-.6"/>',
 };
 const icono = (n, t = 20) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n]}</svg>`;
@@ -444,6 +490,14 @@ function pintarEstado() {
     f.innerHTML = '<input placeholder="Nombre de la nueva lista" maxlength="40"><button class="primario">Crear lista</button>';
     f.onsubmit = e => { e.preventDefault(); if (crearLista(f.querySelector('input').value)) pintar(); };
     estadoEl.appendChild(f);
+    const r = document.createElement('div');
+    r.className = 'respaldo';
+    if (listas.length) {
+      r.appendChild(enlace('Guardar copia', guardarCopia));
+      if (window.oido.compartirArchivo) r.appendChild(enlace('Enviar', enviarCopia));
+    }
+    r.appendChild(enlace('Importar', importarDesdeArchivo));
+    estadoEl.appendChild(r);
   } else {
     const l = listaPorId(vista);
     estadoEl.appendChild(enlace('← Mis listas', () => { vista = 'mislistas'; pintar(); }));
@@ -749,6 +803,7 @@ window.__estado = s => {
     $('#t-pos').textContent = fmt(s.pos);
   }
   $('#t-dur').textContent = s.dur ? fmt(s.dur) : '';
+  actualizarLetra(s);
 };
 
 // Al reabrir la app mientras suena algo
@@ -762,6 +817,7 @@ window.__restaurar = c => {
 // Botón "atrás" de Android
 window.__atras = () => {
   if (menu.classList.contains('abierto')) { cerrarMenu(); return true; }
+  if (pantallaLetra) { cerrarPantallaLetra(); return true; }
   if ($('#panel-tema').classList.contains('abierto')) { $('#panel-tema').classList.remove('abierto'); return true; }
   if (listaPorId(vista)) { vista = 'mislistas'; pintar(); return true; }
   if (vista !== 'resultados') { vista = 'resultados'; pintar(); return true; }
@@ -808,6 +864,224 @@ async function copiarEnlace(it) {
     avisar('No se pudo copiar el enlace');
   }
 }
+
+// ---------- Respaldo de listas: guardar, enviar e importar ----------
+const nombreRespaldo = () => 'oido-listas-' + new Date().toISOString().slice(0, 10) + '.json';
+const textoRespaldo = () => JSON.stringify({
+  app: 'Oido', formato: 1, exportado: new Date().toISOString(),
+  listas: listas.map(l => ({ nombre: l.nombre, items: l.items.map(soloVideo) })),
+}, null, 1);
+
+async function guardarCopia() {
+  try {
+    const ok = await window.oido.guardarArchivo(textoRespaldo(), nombreRespaldo());
+    if (ok) avisar('Copia guardada');
+  } catch { avisar('No se pudo guardar la copia'); }
+}
+function enviarCopia() {
+  try { window.oido.compartirArchivo(textoRespaldo(), nombreRespaldo()); }
+  catch { avisar('No se pudo enviar'); }
+}
+async function importarDesdeArchivo() {
+  try {
+    const texto = await window.oido.abrirArchivo();
+    if (texto != null) importarListas(texto);
+  } catch { avisar('No se pudo abrir el archivo'); }
+}
+
+// Combina: agrega listas nuevas y, si ya existe una con el mismo nombre, suma los audios que falten.
+function importarListas(texto) {
+  let datos;
+  try { datos = JSON.parse(texto); } catch { return avisar('Ese archivo no es un respaldo de Oído'); }
+  const entrantes = Array.isArray(datos) ? datos : datos && datos.listas;
+  if (!Array.isArray(entrantes)) return avisar('Ese archivo no es un respaldo de Oído');
+  let nuevas = 0, audios = 0;
+  for (const e of entrantes) {
+    if (!e || typeof e.nombre !== 'string' || !Array.isArray(e.items)) continue;
+    const items = e.items.filter(x => x && typeof x.id === 'string' && x.id).map(soloVideo);
+    let l = listas.find(x => x.nombre.trim().toLowerCase() === e.nombre.trim().toLowerCase());
+    if (!l) { l = { id: uid(), nombre: e.nombre.trim().slice(0, 40) || 'Lista', items: [] }; listas.push(l); nuevas++; }
+    for (const it of items) if (!l.items.some(x => x.id === it.id)) {
+      l.items.push(it); audios++;
+      if (cola && cola.items === l.items) reproductor.agregar(JSON.stringify([it]));
+    }
+  }
+  guardar();
+  vista = 'mislistas';
+  pintar();
+  avisar(nuevas || audios
+    ? `Importado: ${nuevas} ${nuevas === 1 ? 'lista nueva' : 'listas nuevas'}, ${audios} ${audios === 1 ? 'audio' : 'audios'}`
+    : 'No había nada nuevo que importar');
+}
+window.__importar = importarListas; // Android: "Abrir con Oído" desde WhatsApp o el correo
+
+// ---------- Letra (LRCLIB): sincronizada si la versión coincide, si no, fija ----------
+const cacheLetra = new Map();
+let letra = null;             // { id, estado: 'cargando' | 'sin' | 'sinc' | 'fija', lineas, texto }
+let letraVisible = true;      // franja de karaoke mostrada u oculta (se recuerda)
+try { letraVisible = localStorage.getItem('oido-letra') !== '0'; } catch {}
+let pantallaLetra = false;
+let lineaActual = -1;
+let tituloLetra = '';
+
+const sinAcentos = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const segundos = d => (d || '').split(':').reduce((a, x) => a * 60 + (+x || 0), 0);
+
+// "Artista - Canción (Video Oficial) [4K]" -> { artista, cancion }
+function limpiarTitulo(it) {
+  let t = (it.titulo || '')
+    .replace(/[(\[{][^)\]}]*[)\]}]/g, ' ')               // (Official Video), [Lyrics], (En vivo)…
+    .split(/\s[|｜]\s/)[0]                                // "Canción | Álbum" -> "Canción"
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, ' ') // emojis
+    .replace(/\s(ft\.?|feat\.?|featuring)\s.*$/i, ' ')   // "ft. Alguien"
+    .replace(/\s+/g, ' ').trim();
+  let artista = (it.canal || '').replace(/\s*-\s*Topic$/i, '').replace(/VEVO$/i, '').replace(/\s+Official$/i, '').trim();
+  let cancion = t;
+  const partes = t.split(/\s[-–—]\s/);
+  if (partes.length >= 2) { artista = partes[0].trim(); cancion = partes.slice(1).join(' - ').trim(); }
+  cancion = cancion.replace(/["“”]/g, '').replace(/\s+(lyrics?|letra|con letra)$/i, '').trim();
+  return { artista, cancion };
+}
+
+function leerLRC(txt) {
+  const lineas = [];
+  for (const l of txt.split('\n')) {
+    const tiempos = [...l.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    if (!tiempos.length) continue;
+    const texto = l.replace(/\[[^\]]*\]/g, '').trim() || '♪';
+    for (const t of tiempos) lineas.push({ t: (+t[1] * 60 + +t[2]) * 1000, texto });
+  }
+  return lineas.sort((a, b) => a.t - b.t);
+}
+
+async function pedirJSON(url) {
+  const txt = await window.oido.pedir(url);
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function buscarLetra(it) {
+  const { artista, cancion } = limpiarTitulo(it);
+  const dur = segundos(it.duracion);
+  if (!cancion) return { estado: 'sin' };
+  const base = 'https://lrclib.net/api/';
+  let cands = [];
+  if (artista && dur) {   // 1) búsqueda exacta: artista + canción + duración
+    const g = await pedirJSON(base + 'get?' + new URLSearchParams({ artist_name: artista, track_name: cancion, duration: dur })).catch(() => null);
+    if (g && g.id) cands.push(g);
+  }
+  if (!cands.length) {    // 2) búsqueda libre, comprobando que el nombre de la canción se parezca
+    const r = await pedirJSON(base + 'search?' + new URLSearchParams({ q: (artista + ' ' + cancion).trim() })).catch(() => null);
+    const c = sinAcentos(cancion);
+    if (Array.isArray(r)) cands = r.filter(x => {
+      const n = sinAcentos(x.trackName);
+      return n && c && (n.includes(c.slice(0, 12)) || c.includes(n.slice(0, 12)));
+    });
+  }
+  cands = cands.filter(c => !c.instrumental && (c.syncedLyrics || c.plainLyrics));
+  if (!cands.length) return { estado: 'sin' };
+  const dif = c => dur ? Math.abs((c.duration || 0) - dur) : 999;
+  // Sincronizada solo si la duración coincide (±3 s): si no, es otra versión y se desfasaría
+  const sinc = cands.filter(c => c.syncedLyrics && dif(c) <= 3).sort((a, b) => dif(a) - dif(b))[0];
+  if (sinc) return { estado: 'sinc', lineas: leerLRC(sinc.syncedLyrics) };
+  const c = [...cands].sort((a, b) => dif(a) - dif(b))[0];
+  return { estado: 'fija', texto: c.plainLyrics || c.syncedLyrics.replace(/\[[^\]]*\]/g, '').trim() };
+}
+
+function actualizarLetra(s) {
+  const it = cola && s.hay ? cola.items[s.index] : null;
+  const id = it && !it.vivo ? it.id : null;
+  if (id !== (letra ? letra.id : null)) {
+    lineaActual = -1;
+    tituloLetra = it ? it.titulo : '';
+    if (!id) letra = null;
+    else if (cacheLetra.has(id)) letra = { id, ...cacheLetra.get(id) };
+    else {
+      letra = { id, estado: 'cargando' };
+      buscarLetra(it).then(r => {
+        cacheLetra.set(id, r);
+        if (letra && letra.id === id) { letra = { id, ...r }; pintarLetra(); }
+      }).catch(() => {
+        if (letra && letra.id === id) { letra = { id, estado: 'sin' }; pintarLetra(); }
+      });
+    }
+    pintarLetra();
+  }
+  if (letra && letra.estado === 'sinc') moverLetra(s.pos);
+}
+
+function pintarLetra() {
+  const hay = letra && (letra.estado === 'sinc' || letra.estado === 'fija');
+  const b = $('#btn-letra');
+  b.hidden = !hay;
+  b.classList.toggle('activo', !!hay && (letra.estado === 'fija' || letraVisible));
+  b.title = letra && letra.estado === 'fija' ? 'Ver letra (sin sincronizar)' : letraVisible ? 'Ocultar letra' : 'Mostrar letra';
+  $('#franja').hidden = !(letra && letra.estado === 'sinc' && letraVisible && !pantallaLetra);
+  document.body.classList.toggle('letra-abierta', pantallaLetra);
+  $('#pantalla-letra').hidden = !pantallaLetra;
+  if (pantallaLetra) pintarPantallaLetra();
+  if (letra && letra.estado === 'sinc') { const l = lineaActual; lineaActual = -2; moverLetra(null, l); }
+}
+
+function pintarPantallaLetra() {
+  $('#letra-titulo').textContent = tituloLetra;
+  const cuerpo = $('#letra-cuerpo');
+  cuerpo.innerHTML = '';
+  cuerpo.classList.toggle('fija', !!letra && letra.estado === 'fija');
+  if (!letra || letra.estado === 'sin') { cuerpo.innerHTML = '<p class="aviso-letra">Sin letra para esta canción</p>'; return; }
+  if (letra.estado === 'cargando') { cuerpo.innerHTML = '<p class="aviso-letra">Buscando letra…</p>'; return; }
+  if (letra.estado === 'fija') {
+    const nota = document.createElement('p');
+    nota.className = 'aviso-letra';
+    nota.textContent = 'Letra sin sincronizar (esta versión dura distinto)';
+    const p = document.createElement('p');
+    p.className = 'texto-fijo';
+    p.textContent = letra.texto;
+    cuerpo.append(nota, p);
+    return;
+  }
+  letra.lineas.forEach((l, i) => {
+    const p = document.createElement('p');
+    p.textContent = l.texto;
+    p.dataset.i = i;
+    cuerpo.appendChild(p);
+  });
+}
+
+// Resalta la línea que suena (pos en ms). Se adelanta 0,2 s para que no se sienta tarde.
+function moverLetra(pos, forzar) {
+  const ls = letra.lineas;
+  let i = forzar;
+  if (pos != null) {
+    i = -1;
+    for (let k = 0; k < ls.length && ls[k].t <= pos + 200; k++) i = k;
+  }
+  if (i === lineaActual) return;
+  lineaActual = i;
+  $('#franja .l1').textContent = i >= 0 ? ls[i].texto : '♪';
+  $('#franja .l2').textContent = ls[i + 1] ? ls[i + 1].texto : '';
+  if (pantallaLetra) {
+    const cuerpo = $('#letra-cuerpo');
+    cuerpo.querySelectorAll('p.actual').forEach(p => p.classList.remove('actual'));
+    const p = cuerpo.querySelector(`p[data-i="${i}"]`);
+    if (p) { p.classList.add('actual'); p.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  }
+}
+
+function abrirPantallaLetra() { pantallaLetra = true; pintarLetra(); }
+function cerrarPantallaLetra() { pantallaLetra = false; pintarLetra(); }
+
+$('#btn-letra').innerHTML = icono('letra', 22);
+$('#btn-letra').onclick = () => {
+  if (!letra) return;
+  if (letra.estado === 'fija') return abrirPantallaLetra();
+  letraVisible = !letraVisible;
+  try { localStorage.setItem('oido-letra', letraVisible ? '1' : '0'); } catch {}
+  pintarLetra();
+};
+$('#franja .exp').innerHTML = icono('expandir', 16);
+$('#franja').onclick = abrirPantallaLetra;
+$('#cerrar-letra').innerHTML = icono('abajo', 26);
+$('#cerrar-letra').onclick = cerrarPantallaLetra;
 
 // ---------- Tema: eliges un tono y se calculan fondo, texto y acento ----------
 const TONOS = [175, 35, 350, 265, 130, 210];
