@@ -2,6 +2,11 @@ name: Construir APK
 
 on:
   push:
+    # Cambiar solo la documentación no genera un APK nuevo
+    paths-ignore:
+      - "README.md"
+      - "logo.png"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:

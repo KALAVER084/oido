@@ -5,6 +5,9 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.pm.ActivityInfo
+import android.hardware.display.DisplayManager
+import android.view.WindowManager
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
@@ -51,6 +54,38 @@ class MainActivity : ComponentActivity() {
     private val trabajo = Executors.newFixedThreadPool(3)
     private val archivoListas by lazy { File(filesDir, "listas.json") }
     private var ultimaRevision = 0L
+
+    // ---------- Karaoke ----------
+    private val gestorPantallas by lazy { getSystemService(DisplayManager::class.java) }
+    private var tv: KaraokeTv? = null
+    private var letraAbierta = false
+
+    private val oyentePantallas = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(id: Int) = revisarPantallaExterna()
+        override fun onDisplayRemoved(id: Int) = revisarPantallaExterna()
+        override fun onDisplayChanged(id: Int) = revisarPantallaExterna()
+    }
+
+    /** Si hay una tele conectada (cable, dock, Miracast), muestra el karaoke ahí. */
+    private fun revisarPantallaExterna() {
+        val externa = gestorPantallas?.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)?.firstOrNull()
+        val actual = tv
+        if (externa != null && actual != null && actual.display.displayId == externa.displayId) return
+        actual?.let { runCatching { it.dismiss() } }
+        tv = null
+        if (externa != null) {
+            val nueva = KaraokeTv(this, externa) { js("window.__pantallaExterna && window.__pantallaExterna(true)") }
+            tv = runCatching { nueva.show(); nueva }.getOrNull()
+        }
+        if (tv == null) js("window.__pantallaExterna && window.__pantallaExterna(false)")
+        actualizarPantallaEncendida()
+    }
+
+    /** Pantalla siempre encendida mientras se ve la letra completa o hay karaoke en la tele. */
+    private fun actualizarPantallaEncendida() {
+        if (letraAbierta || tv != null) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
     private val http by lazy { OkHttpClient() }
 
     // ---------- Archivos de respaldo de listas ----------
@@ -174,6 +209,7 @@ class MainActivity : ComponentActivity() {
                 enviarCola()
                 enviarEstado()
                 revisarActualizacion()
+                if (tv != null) js("window.__pantallaExterna && window.__pantallaExterna(true)")
             }
         }
         web.addJavascriptInterface(Puente(), "OidoNativo")
@@ -198,6 +234,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         revisarActualizacion()
+        gestorPantallas?.registerDisplayListener(oyentePantallas, main)
+        revisarPantallaExterna()
         val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
         val f = MediaController.Builder(this, token).buildAsync()
         futuro = f
@@ -213,6 +251,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        gestorPantallas?.unregisterDisplayListener(oyentePantallas)
+        tv?.let { runCatching { it.dismiss() } }
+        tv = null
         main.removeCallbacks(reloj)
         controller?.removeListener(oyente)
         futuro?.let { MediaController.releaseFuture(it) }
@@ -419,6 +460,24 @@ class MainActivity : ComponentActivity() {
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     startActivity(Intent.createChooser(enviar, "Enviar mis listas"))
                 }
+            }
+        }
+
+        /** Karaoke en la tele: canción, letra o posición. */
+        @JavascriptInterface fun karaoke(json: String) {
+            main.post { tv?.enviar(json) }
+        }
+
+        /**
+         * Letra a pantalla completa abierta/cerrada. Abierta: el teléfono gira con el sensor
+         * (aunque la rotación esté bloqueada) para el karaoke en horizontal, y no se apaga la pantalla.
+         */
+        @JavascriptInterface fun letraCompleta(abierta: Boolean) {
+            main.post {
+                letraAbierta = abierta
+                requestedOrientation = if (abierta) ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                actualizarPantallaEncendida()
             }
         }
 

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>Oído · Karaoke</title>
+<!--
+  Modo karaoke. La misma página se muestra:
+  - en la tele, cuando hay una segunda pantalla (cable, dock, Miracast);
+  - en el teléfono, al girarlo con la letra en pantalla completa.
+  Recibe mensajes { tipo: 'cancion' | 'pos', ... } de la app.
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --fondo: hsl(175 22% 7%); --linea: hsl(175 14% 19%); --texto: hsl(175 20% 92%);
+    --suave: hsl(175 10% 58%); --acento: hsl(175 78% 62%);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--fondo); color: var(--texto); overflow: hidden;
+    font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  #k { position: relative; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
+  #tit { font-size: 3.4vmin; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70vw; }
+  #art { font-size: 2.6vmin; color: var(--suave); }
+  .logo { display: flex; align-items: center; gap: 1vmin; color: var(--suave); font-size: 2.6vmin; flex: none; }
+  .logo svg { width: 3.6vmin; height: 3.6vmin; }
+
+  .vista { flex: 1; min-height: 0; display: none; }
+  .vista.visible { display: flex; }
+
+  /* Letra sincronizada: cuatro líneas, la actual grande */
+  #lineas { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2.4vh; }
+  #lineas div { max-width: 92vw; transition: opacity .3s ease, transform .3s ease; }
+  .pas { color: var(--suave); font-size: 4.2vmin; opacity: .55; }
+  .act { color: var(--acento); font-size: 7.6vmin; font-weight: 700; line-height: 1.15; }
+  .sig { font-size: 5vmin; }
+  .sig2 { color: var(--suave); font-size: 4.2vmin; }
+  #lineas.cambio div { opacity: 0; transform: translateY(1.5vh); }
+
+  /* Letra fija: texto completo que se desplaza con el avance de la canción */
+  #fija { overflow: hidden; justify-content: center; }
+  #fija-texto { white-space: pre-wrap; text-align: center; font-size: 4.6vmin; line-height: 1.5; padding: 20vh 0; }
+  #fija-nota { position: absolute; top: 12vh; left: 0; right: 0; text-align: center; color: var(--suave); font-size: 2.4vmin; }
+
+  /* Sin letra: título y logo en grande */
+  #solo { flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2vh; }
+  #solo svg { width: 18vmin; height: 18vmin; }
+  #solo-tit { font-size: 6vmin; font-weight: 700; max-width: 90vw; }
+  #solo-art { font-size: 3.6vmin; color: var(--suave); }
+
+  .bar { display: flex; align-items: center; gap: 2vw; font-size: 2.4vmin; color: var(--suave); font-variant-numeric: tabular-nums; }
+  .trk { flex: 1; height: .7vmin; min-height: 3px; border-radius: 99px; background: var(--linea); overflow: hidden; }
+  #prog { height: 100%; width: 0; background: var(--acento); transition: width .25s linear; }
+</style>
+</head>
+<body>
+<div id="k">
+  <div class="top">
+    <div><div id="tit"></div><div id="art"></div></div>
+    <div class="logo">
+      <svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="42" cy="54" r="7.5" fill="currentColor" style="color:var(--acento)"/><g fill="none" stroke="var(--acento)" stroke-width="7" stroke-linecap="round"><path d="M54.4 41a18 18 0 0 1 0 26"/><path d="M64.2 31a32 32 0 0 1 0 46"/></g></svg>
+      Oído
+    </div>
+  </div>
+
+  <div id="lineas" class="vista">
+    <div class="pas"></div>
+    <div class="act"></div>
+    <div class="sig"></div>
+    <div class="sig2"></div>
+  </div>
+
+  <div id="fija" class="vista">
+    <div id="fija-nota">Letra sin sincronizar</div>
+    <div id="fija-texto"></div>
+  </div>
+
+  <div id="solo" class="vista visible">
+    <svg viewBox="0 0 108 108" aria-hidden="true"><circle cx="42" cy="54" r="7.5" fill="var(--acento)"/><g fill="none" stroke="var(--acento)" stroke-width="7" stroke-linecap="round"><path d="M54.4 41a18 18 0 0 1 0 26"/><path d="M64.2 31a32 32 0 0 1 0 46"/></g></svg>
+    <div id="solo-tit">Oído</div>
+    <div id="solo-art"></div>
+  </div>
+
+  <div class="bar"><span id="pos">0:00</span><div class="trk"><div id="prog"></div></div><span id="dur"></span></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+let cancion = null, pos = 0, dur = 0, actual = -2;
+
+const fmt = ms => {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  const p = n => String(n).padStart(2, '0');
+  return h ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
+};
+
+function mostrar(id) {
+  document.querySelectorAll('.vista').forEach(v => v.classList.toggle('visible', v.id === id));
+}
+
+function pintar() {
+  const c = cancion || {};
+  if (c.tema) for (const [k, v] of Object.entries(c.tema)) document.documentElement.style.setProperty(k, v);
+  $('#tit').textContent = c.titulo || '';
+  $('#art').textContent = c.canal || '';
+  $('#solo-tit').textContent = c.titulo || 'Oído';
+  $('#solo-art').textContent = c.canal || '';
+  const est = c.letra && c.letra.estado;
+  if (est === 'sinc') mostrar('lineas');
+  else if (est === 'fija') { mostrar('fija'); $('#fija-texto').textContent = c.letra.texto || ''; $('#fija').scrollTop = 0; }
+  else mostrar('solo');
+  // Cuando hay letra, el título va arriba; sin letra, va grande en el centro
+  document.querySelector('.top').style.visibility = est ? 'visible' : 'hidden';
+  actual = -2;
+  mover();
+}
+
+function mover() {
+  $('#pos').textContent = fmt(pos);
+  $('#dur').textContent = dur ? fmt(dur) : '';
+  $('#prog').style.width = dur ? Math.min(100, pos / dur * 100) + '%' : '0';
+  const l = cancion && cancion.letra;
+  if (!l) return;
+  if (l.estado === 'fija') {
+    const f = $('#fija');
+    if (dur) f.scrollTo({ top: (f.scrollHeight - f.clientHeight) * Math.min(1, pos / dur), behavior: 'smooth' });
+    return;
+  }
+  const ls = l.lineas || [];
+  let i = -1;
+  for (let k = 0; k < ls.length && ls[k].t <= pos + 200; k++) i = k; // 0,2 s de adelanto
+  if (i === actual) return;
+  const texto = k => (k >= 0 && ls[k]) ? ls[k].texto : '';
+  const poner = () => {
+    $('.pas').textContent = texto(i - 1);
+    $('.act').textContent = i >= 0 ? texto(i) : '♪';
+    $('.sig').textContent = texto(i + 1);
+    $('.sig2').textContent = texto(i + 2);
+  };
+  const lineas = $('#lineas');
+  if (actual === -2) { poner(); } // primera vez: sin animación
+  else {
+    lineas.classList.add('cambio');
+    setTimeout(() => { poner(); lineas.classList.remove('cambio'); }, 160);
+  }
+  actual = i;
+}
+
+function recibir(m) {
+  if (!m || typeof m !== 'object') return;
+  if (m.tipo === 'cancion') { cancion = m; pintar(); }
+  else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
+}
+window.__karaoke = recibir;                                // tele: lo llama Android
+window.addEventListener('message', e => recibir(e.data));  // teléfono: lo manda la app
+</script>
+</body>
+</html>
