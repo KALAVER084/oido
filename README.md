@@ -23,6 +23,7 @@ Oído hace una sola cosa: **buscar en YouTube y reproducir solo el audio**.
 - **Sin anuncios:** nunca carga páginas ni el reproductor de YouTube; pide el audio directo.
 - **Tus listas:** crea, ordena y reproduce listas propias. Guárdalas como copia (por ejemplo en Google Drive) o envíalas por WhatsApp o correo para pasarlas a otro teléfono.
 - **Letras sincronizadas:** si la canción tiene letra, la muestra al ritmo de la música, en una franja o a pantalla completa. Si la versión no coincide (en vivo, videoclip con intro), la muestra fija para que nunca vaya desfasada.
+- **Modo karaoke:** con una tele conectada (cable, dock o Miracast) la letra aparece en grande en la tele mientras usas el teléfono normal. Con cualquier otra forma de duplicar pantalla, abre la letra a pantalla completa y gira el teléfono.
 - **En vivo:** transmisiones como Lofi Girl, en la calidad más baja para gastar pocos datos.
 - **Compartir:** copia el enlace de cualquier audio, mix o lista.
 - **Tema a tu gusto:** eliges un color y la app ajusta fondo, texto y acentos.
@@ -57,16 +58,7 @@ Las versiones nuevas se instalan **encima** de la anterior y conservan tus lista
 
 ## Mantenimiento
 
-Casi todo es automático:
-
-- **Cada día** la tarea *Revisar actualizaciones* (en Actions) busca una versión nueva de NewPipe Extractor. Si la hay, compila con ella y, solo si compila bien, la guarda y publica un Release.
-- **Cada cambio** que se sube al repositorio compila y publica un APK nuevo (*Construir APK*).
-- **La llave de firma no está en el código:** vive en los Secrets del repositorio (`OIDO_KEYSTORE` y `OIDO_KEY_PASSWORD`). Hay que guardar una copia fuera de GitHub; sin ella no se puede actualizar la app encima de la instalada.
-
-Solo hay que intervenir si:
-
-- GitHub avisa de una **compilación fallida**: en Actions, abrir la ejecución con ❌ → **View raw logs** y revisar las líneas `e:` o el bloque *What went wrong*.
-- GitHub avisa de que **pausó las tareas** por 60 días sin cambios: Actions → la tarea → **Enable workflow**.
+Casi todo es automático. Las instrucciones para cuando algo falla están en **[MANTENIMIENTO.md](MANTENIMIENTO.md)**.
 
 ## Licencia
 

@@ -5,6 +5,7 @@ on:
     # Cambiar solo la documentación no genera un APK nuevo
     paths-ignore:
       - "README.md"
+      - "MANTENIMIENTO.md"
       - "logo.png"
       - "LICENSE"
   workflow_dispatch:
