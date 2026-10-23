@@ -125,7 +125,18 @@
   body.letra-abierta header, body.letra-abierta main { display: none; }
   #pantalla-letra { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .cab-letra { display: flex; align-items: center; gap: .5rem; padding: 1rem 1rem .4rem; }
-  #letra-titulo { color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #letra-titulo { flex: 1; min-width: 0; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acciones-letra { display: flex; align-items: center; gap: .3rem; flex: none; }
+  #btn-sync, #btn-deshacer { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; color: var(--suave); }
+  #btn-sync.ajustado { color: var(--acento); background: var(--tinte); }
+  #btn-cancelar-sync { border: 1px solid var(--linea); color: var(--suave); border-radius: 999px; padding: .3rem .9rem; font-size: .9rem; }
+  .zona-letra { position: relative; flex: 1; min-height: 0; display: flex; }
+  #guia { position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed var(--acento); pointer-events: none; }
+  #guia span { position: absolute; right: 1rem; top: -.75rem; background: var(--fondo); color: var(--acento); font-size: .75rem; padding: 0 .35rem; }
+  #letra-cuerpo.sincronizando { padding-top: 45vh; padding-bottom: 45vh; }
+  #letra-cuerpo.sincronizando p { color: var(--texto); }
+  #pista-sync { margin: 0; padding: .4rem 1rem .8rem; text-align: center; color: var(--suave); font-size: .85rem; }
+  .canal .ajustada { color: var(--acento); }
   #letra-cuerpo { flex: 1; overflow-y: auto; padding: 30vh 1.25rem; text-align: center; }
   #letra-cuerpo p { margin: .9rem 0; font-size: 1.25rem; line-height: 1.35; color: var(--suave); transition: color .25s, transform .25s; }
   #letra-cuerpo p.actual { color: var(--acento); font-weight: 700; transform: scale(1.04); }
@@ -185,8 +196,17 @@
 <section id="pantalla-letra" hidden>
   <div class="ancho cab-letra">
     <span id="letra-titulo"></span>
+    <span class="acciones-letra">
+      <button id="btn-deshacer" hidden title="Deshacer ajuste" aria-label="Deshacer ajuste"></button>
+      <button id="btn-sync" hidden aria-label="Sincronizar letra"></button>
+      <button id="btn-cancelar-sync" hidden>Cancelar</button>
+    </span>
   </div>
-  <div id="letra-cuerpo" class="ancho"></div>
+  <div class="zona-letra">
+    <div id="letra-cuerpo" class="ancho"></div>
+    <div id="guia" hidden><span>ahora</span></div>
+  </div>
+  <p id="pista-sync" hidden>Desliza hasta la línea que se canta ahora y suelta</p>
 </section>
 <iframe id="karaoke-marco" src="karaoke.html" hidden title="Karaoke"></iframe>
 <div id="menu" role="menu"></div>
@@ -362,6 +382,8 @@ const ICONOS = {
   tema: '<path d="M12 21a9 9 0 1 1 9-9c0 2.5-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A1 1 0 0 1 12 21z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="16" cy="8.5" r="1.2" fill="currentColor"/>',
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
   letra: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none"/>',
+  sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
+  deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   enlace: '<path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.6.6M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.6-.6"/>',
 };
 const icono = (n, t = 20) => `<svg viewBox="0 0 24 24" width="${t}" height="${t}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n]}</svg>`;
@@ -596,6 +618,12 @@ function pintar() {
     li.innerHTML = '<span class="titulo"></span><span class="canal"></span><span class="dur"></span><span class="acciones"></span>';
     li.querySelector('.titulo').textContent = it.titulo;
     li.querySelector('.canal').textContent = [it.canal, it.fecha ? haceCuanto(it.fecha) : ''].filter(Boolean).join(' · ');
+    if (!esColeccion(it) && ajustes[it.id] != null) {
+      const m = document.createElement('span');
+      m.className = 'ajustada';
+      m.textContent = ' · letra ajustada';
+      li.querySelector('.canal').appendChild(m);
+    }
     if (esColeccion(it)) {
       li.classList.add('coleccion');
       const t = document.createElement('span');
@@ -869,6 +897,7 @@ const nombreRespaldo = () => 'oido-listas-' + new Date().toISOString().slice(0, 
 const textoRespaldo = () => JSON.stringify({
   app: 'Oido', formato: 1, exportado: new Date().toISOString(),
   listas: listas.map(l => ({ nombre: l.nombre, items: l.items.map(soloVideo) })),
+  ajustes,   // sincronizaciones de letra hechas a mano
 }, null, 1);
 
 async function guardarCopia() {
@@ -905,6 +934,13 @@ function importarListas(texto) {
       if (cola && cola.items === l.items) reproductor.agregar(JSON.stringify([it]));
     }
   }
+  // Ajustes de letra: se agregan los que no tengas (los tuyos no se tocan)
+  if (datos && datos.ajustes && typeof datos.ajustes === 'object') {
+    for (const [id, ms] of Object.entries(datos.ajustes)) {
+      if (ajustes[id] == null && Number.isFinite(ms)) ajustes[id] = ms;
+    }
+    guardarAjustes();
+  }
   guardar();
   vista = 'mislistas';
   pintar();
@@ -921,6 +957,21 @@ let letra = null;             // { id, estado: 'cargando' | 'sin' | 'sinc' | 'fi
 let modoLetra = 'mini';
 try { modoLetra = localStorage.getItem('oido-letra-modo') || 'mini'; } catch {}
 let pantallaLetra = false;    // ¿se está mostrando la pantalla completa ahora?
+let posActual = 0;            // ms, la última posición que avisó el reproductor
+let sincronizando = false;    // modo "sync": deslizar la letra hasta la línea que suena
+
+// Ajuste de tiempo por video: { idDelVideo: milisegundos }. Se recuerda para siempre.
+let ajustes = {};
+try { ajustes = JSON.parse(localStorage.getItem('oido-ajustes') || '{}') || {}; } catch {}
+const guardarAjustes = () => { try { localStorage.setItem('oido-ajustes', JSON.stringify(ajustes)); } catch {} };
+
+// Aplica el ajuste guardado (si lo hay) a la letra tal como vino de LRCLIB
+function conAjuste(id, r) {
+  const off = ajustes[id];
+  if (off == null || !r.lineas) return { id, ...r, ajustada: false };
+  return { id, ...r, estado: 'sinc', ajustada: true, lineas: r.lineas.map(l => ({ t: l.t + off, texto: l.texto })) };
+}
+const lineasBase = () => ((letra && cacheLetra.get(letra.id)) || letra || {}).lineas || [];
 let lineaActual = -1;
 let tituloLetra = '';
 
@@ -984,22 +1035,30 @@ async function buscarLetra(it) {
   const sinc = cands.filter(c => c.syncedLyrics && dif(c) <= 3).sort((a, b) => dif(a) - dif(b))[0];
   if (sinc) return { estado: 'sinc', lineas: leerLRC(sinc.syncedLyrics) };
   const c = [...cands].sort((a, b) => dif(a) - dif(b))[0];
-  return { estado: 'fija', texto: c.plainLyrics || c.syncedLyrics.replace(/\[[^\]]*\]/g, '').trim() };
+  // Si hay tiempos de otra versión se guardan: con "sync" se pueden ajustar a este video
+  const conTiempos = cands.filter(x => x.syncedLyrics).sort((a, b) => dif(a) - dif(b))[0];
+  return {
+    estado: 'fija',
+    texto: c.plainLyrics || c.syncedLyrics.replace(/\[[^\]]*\]/g, '').trim(),
+    lineas: conTiempos ? leerLRC(conTiempos.syncedLyrics) : null,
+  };
 }
 
 function actualizarLetra(s) {
+  posActual = s.pos;
   const it = cola && s.hay ? cola.items[s.index] : null;
   const id = it && !it.vivo ? it.id : null;
   if (id !== (letra ? letra.id : null)) {
     lineaActual = -1;
+    sincronizando = false;
     tituloLetra = it ? it.titulo : '';
     if (!id) letra = null;
-    else if (cacheLetra.has(id)) letra = { id, ...cacheLetra.get(id) };
+    else if (cacheLetra.has(id)) letra = conAjuste(id, cacheLetra.get(id));
     else {
       letra = { id, estado: 'cargando' };
       buscarLetra(it).then(r => {
         cacheLetra.set(id, r);
-        if (letra && letra.id === id) { letra = { id, ...r }; pintarLetra(); }
+        if (letra && letra.id === id) { letra = conAjuste(id, r); pintarLetra(); }
       }).catch(() => {
         if (letra && letra.id === id) { letra = { id, estado: 'sin' }; pintarLetra(); }
       });
@@ -1037,17 +1096,33 @@ function cambiarModoLetra(modo) {
   pintarLetra();
 }
 
+function pintarAccionesLetra() {
+  const conTiempos = !!(letra && letra.lineas && letra.lineas.length);
+  $('#btn-sync').hidden = !conTiempos || sincronizando;
+  $('#btn-sync').classList.toggle('ajustado', !!(letra && letra.ajustada));
+  $('#btn-sync').title = letra && letra.ajustada ? 'Volver a sincronizar' : 'Sincronizar letra';
+  $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando;
+  $('#btn-cancelar-sync').hidden = !sincronizando;
+  $('#guia').hidden = !sincronizando;
+  $('#pista-sync').hidden = !sincronizando;
+}
+
 function pintarPantallaLetra() {
   $('#letra-titulo').textContent = tituloLetra;
+  pintarAccionesLetra();
   const cuerpo = $('#letra-cuerpo');
   cuerpo.innerHTML = '';
+  cuerpo.classList.toggle('sincronizando', sincronizando);
+  if (sincronizando && letra && letra.lineas) return pintarModoSync(cuerpo);
   cuerpo.classList.toggle('fija', !!letra && letra.estado === 'fija');
   if (!letra || letra.estado === 'sin') { cuerpo.innerHTML = '<p class="aviso-letra">Sin letra para esta canción</p>'; return; }
   if (letra.estado === 'cargando') { cuerpo.innerHTML = '<p class="aviso-letra">Buscando letra…</p>'; return; }
   if (letra.estado === 'fija') {
     const nota = document.createElement('p');
     nota.className = 'aviso-letra';
-    nota.textContent = 'Letra sin sincronizar (esta versión dura distinto)';
+    nota.textContent = letra.lineas
+      ? 'Letra sin sincronizar: toca ⟳ y desliza hasta la línea que suena'
+      : 'Letra sin sincronizar (esta versión dura distinto)';
     const p = document.createElement('p');
     p.className = 'texto-fijo';
     p.textContent = letra.texto;
@@ -1076,7 +1151,7 @@ function moverLetra(pos, forzar) {
   lineaActual = i;
   $('#franja .l1').textContent = i >= 0 ? ls[i].texto : '♪';
   $('#franja .l2').textContent = ls[i + 1] ? ls[i + 1].texto : '';
-  if (pantallaLetra) {
+  if (pantallaLetra && !sincronizando) {
     const cuerpo = $('#letra-cuerpo');
     cuerpo.querySelectorAll('p.actual').forEach(p => p.classList.remove('actual'));
     const p = cuerpo.querySelector(`p[data-i="${i}"]`);
@@ -1085,7 +1160,80 @@ function moverLetra(pos, forzar) {
   }
 }
 
-function cerrarPantallaLetra() { cambiarModoLetra('cerrada'); }
+function cerrarPantallaLetra() { sincronizando = false; cambiarModoLetra('cerrada'); }
+
+// ---------- Sincronizar a mano: deslizar hasta la línea que suena y soltar ----------
+let ignorarScrollHasta = 0, temporizadorSync = null, tocando = false, movido = false;
+
+function pintarModoSync(cuerpo) {
+  cuerpo.classList.remove('fija');
+  const base = lineasBase();
+  base.forEach((l, i) => {
+    const p = document.createElement('p');
+    p.textContent = l.texto;
+    p.dataset.i = i;
+    cuerpo.appendChild(p);
+  });
+  // Empieza cerca de donde debería ir, para deslizar poco
+  let i = 0;
+  (letra.lineas || []).forEach((l, k) => { if (l.t <= posActual) i = k; });
+  const p = cuerpo.querySelector(`p[data-i="${i}"]`);
+  ignorarScrollHasta = Date.now() + 600;
+  movido = false;
+  if (p) p.scrollIntoView({ block: 'center' });
+}
+
+function programarSync() {
+  if (!sincronizando || Date.now() < ignorarScrollHasta) return;
+  movido = true;
+  clearTimeout(temporizadorSync);
+  if (!tocando) temporizadorSync = setTimeout(fijarSincronizacion, 450);
+}
+
+function fijarSincronizacion() {
+  if (!sincronizando || !movido || !letra) return;
+  const cuerpo = $('#letra-cuerpo');
+  const r = cuerpo.getBoundingClientRect();
+  const centro = r.top + r.height / 2;
+  let mejor = null, dist = Infinity;
+  cuerpo.querySelectorAll('p[data-i]').forEach(p => {
+    const b = p.getBoundingClientRect();
+    const d = Math.abs(b.top + b.height / 2 - centro);
+    if (d < dist) { dist = d; mejor = p; }
+  });
+  const linea = mejor && lineasBase()[+mejor.dataset.i];
+  if (!linea) return;
+  // La línea del centro se está cantando ahora: la diferencia es el desfase de este video
+  ajustes[letra.id] = Math.round(posActual - linea.t);
+  guardarAjustes();
+  sincronizando = false;
+  letra = conAjuste(letra.id, cacheLetra.get(letra.id) || letra);
+  lineaActual = -1;
+  pintarLetra();
+  pintar();
+  avisar('Letra sincronizada');
+}
+
+$('#btn-sync').innerHTML = icono('sync', 20);
+$('#btn-sync').onclick = () => { sincronizando = true; pintarLetra(); };
+$('#btn-deshacer').innerHTML = icono('deshacer', 20);
+$('#btn-deshacer').onclick = () => {
+  if (!letra) return;
+  delete ajustes[letra.id];
+  guardarAjustes();
+  letra = conAjuste(letra.id, cacheLetra.get(letra.id) || letra);
+  lineaActual = -1;
+  pintarLetra();
+  pintar();
+  avisar('Ajuste eliminado');
+};
+$('#btn-cancelar-sync').onclick = () => { sincronizando = false; pintarLetra(); };
+{
+  const cuerpo = $('#letra-cuerpo');
+  cuerpo.addEventListener('scroll', programarSync, { passive: true });
+  cuerpo.addEventListener('touchstart', () => { tocando = true; clearTimeout(temporizadorSync); }, { passive: true });
+  cuerpo.addEventListener('touchend', () => { tocando = false; if (movido) programarSync(); }, { passive: true });
+}
 
 // Un solo botón: sincronizada mini → completa → cerrada; fija (sin franja): completa ↔ cerrada
 $('#btn-letra').innerHTML = icono('letra', 24);
@@ -1099,7 +1247,7 @@ $('#btn-letra').onclick = () => {
 
 // ---------- Karaoke: en la tele (segunda pantalla) o con el teléfono en horizontal ----------
 const esAndroid = !!window.OidoNativo;
-const horizontal = matchMedia('(orientation: landscape)');
+const horizontal = window.matchMedia ? matchMedia('(orientation: landscape)') : { matches: false, addEventListener() {} };
 let pantallaExterna = false;
 let letraCompletaAvisada = false;
 
