@@ -501,6 +501,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        /** Compartir Oído: abre el menú de compartir de Android con el mensaje y el enlace. */
+        @JavascriptInterface fun compartirTexto(texto: String) {
+            main.post {
+                runCatching {
+                    val enviar = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, texto)
+                    startActivity(Intent.createChooser(enviar, "Compartir Oído"))
+                }
+            }
+        }
+
         /** Copia un enlace al portapapeles (botón de compartir). */
         @JavascriptInterface fun copiar(texto: String) {
             main.post {

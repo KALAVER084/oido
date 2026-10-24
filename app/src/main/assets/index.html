@@ -56,6 +56,15 @@
   .fila-tema { display: flex; align-items: center; justify-content: space-between; margin-top: .8rem; }
   #puntos { display: flex; gap: .6rem; }
   .punto { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--linea); padding: 0; }
+  #btn-buscar { display: grid; place-items: center; width: 3rem; height: 2.75rem; padding: 0; }
+  #btn-dinamico { display: flex; align-items: center; gap: .45rem; border: 1px solid var(--linea); border-radius: 999px; padding: .3rem .8rem .3rem .35rem; color: var(--suave); font-size: .9rem; }
+  #btn-dinamico.activo { border-color: var(--acento); color: var(--acento); }
+  .arcoiris { width: 22px; height: 22px; border-radius: 50%; flex: none;
+    background: conic-gradient(hsl(0 75% 60%), hsl(60 75% 60%), hsl(120 75% 60%), hsl(180 75% 60%), hsl(240 75% 60%), hsl(300 75% 60%), hsl(360 75% 60%)); }
+  #btn-dinamico.activo .arcoiris { animation: girar 6s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  #btn-compartir-app { display: flex; align-items: center; gap: .45rem; color: var(--acento); padding: .3rem 0; }
+  .fila-tema { flex-wrap: wrap; gap: .6rem; }
   #tema-listo { color: var(--acento); padding: .3rem .5rem; }
 
   nav { display: flex; gap: .25rem; overflow-x: auto; margin-top: .8rem; border-bottom: 1px solid var(--linea); scrollbar-width: none; }
@@ -126,6 +135,7 @@
   #pantalla-letra { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .cab-letra { display: flex; align-items: center; gap: .5rem; padding: 1rem 1rem .4rem; }
   #letra-titulo { flex: 1; min-width: 0; color: var(--suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #pista-karaoke { flex: none; color: var(--suave); font-size: .8rem; border: 1px solid var(--linea); border-radius: 999px; padding: .15rem .6rem; }
   .acciones-letra { display: flex; align-items: center; gap: .3rem; flex: none; }
   #btn-sync, #btn-deshacer { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: 50%; color: var(--suave); }
   #btn-sync.ajustado { color: var(--acento); background: var(--tinte); }
@@ -187,13 +197,19 @@
     </div>
     <form id="f">
       <input id="q" type="search" placeholder="Buscar en YouTube" autocomplete="off" enterkeyhint="search">
-      <button class="primario">Buscar</button>
+      <button class="primario" id="btn-buscar" aria-label="Buscar" title="Buscar"></button>
       <button type="button" id="btn-tema" title="Tema" aria-label="Cambiar tema"></button>
     </form>
     <div id="panel-tema">
       <input id="tono" type="range" min="0" max="359" step="1" aria-label="Tono del tema">
       <div class="fila-tema">
         <div id="puntos"></div>
+        <button type="button" id="btn-dinamico" aria-pressed="false" title="Los colores cambian solos, despacio">
+          <span class="arcoiris"></span>Dinámico
+        </button>
+      </div>
+      <div class="fila-tema">
+        <button type="button" id="btn-compartir-app"></button>
         <button type="button" id="tema-listo">Listo</button>
       </div>
     </div>
@@ -209,6 +225,7 @@
 <section id="pantalla-letra" hidden>
   <div class="ancho cab-letra">
     <span id="letra-titulo"></span>
+    <span id="pista-karaoke" hidden title="Karaoke a pantalla completa">F11 · Karaoke</span>
     <span class="acciones-letra">
       <button id="btn-deshacer" hidden title="Deshacer ajuste" aria-label="Deshacer ajuste"></button>
       <button id="btn-sync" hidden aria-label="Sincronizar letra"></button>
@@ -290,6 +307,9 @@ if (window.OidoNativo) {
     copiar: async t => OidoNativo.copiar(t),
     abrirEnlace: url => OidoNativo.abrirEnlace(url),
     pedir: url => llamar('pedir', url),
+    karaoke: json => OidoNativo.karaoke(json),
+    compartirTexto: texto => OidoNativo.compartirTexto(texto),
+    karaokeLocal: activo => OidoNativo.karaokeLocal(activo),
     guardarArchivo: (texto, nombre) => llamar('guardarArchivo', texto, nombre),
     abrirArchivo: () => llamar('abrirArchivo'),
     compartirArchivo: (texto, nombre) => OidoNativo.compartirArchivo(texto, nombre),
@@ -412,6 +432,8 @@ const ICONOS = {
   tema: '<path d="M12 21a9 9 0 1 1 9-9c0 2.5-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A1 1 0 0 1 12 21z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="11" cy="7" r="1.2" fill="currentColor"/><circle cx="16" cy="8.5" r="1.2" fill="currentColor"/>',
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
   letra: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none"/>',
+  buscar: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  compartir: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
   deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   enlace: '<path d="M10 14a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-.6.6M14 10a3.5 3.5 0 0 0-5 0l-4 4a3.5 3.5 0 0 0 5 5l.6-.6"/>',
@@ -1338,9 +1360,9 @@ function datosKaraoke() {
 }
 // El karaoke (en la tele o encima de la app) lo muestra Android con su propia pantalla
 let karaokeLocalActivo = false;
-const hayKaraoke = () => esAndroid && (pantallaExterna || karaokeLocalActivo);
+const hayKaraoke = () => !!window.oido.karaoke && (pantallaExterna || karaokeLocalActivo);
 function enviarKaraoke(m) {
-  if (hayKaraoke()) OidoNativo.karaoke(JSON.stringify(m));
+  if (hayKaraoke()) window.oido.karaoke(JSON.stringify(m));
 }
 function karaokeCancion() {
   if (hayKaraoke()) enviarKaraoke(datosKaraoke());
@@ -1352,9 +1374,21 @@ function actualizarKaraokeLocal() {
   if (activo === karaokeLocalActivo) return;
   karaokeLocalActivo = activo;
   document.body.classList.toggle('karaoke', activo);
-  OidoNativo.karaokeLocal(activo);   // al estar lista avisa con __karaokeListo y se le manda la canción
+  window.oido.karaokeLocal(activo);   // al estar lista avisa con __karaokeListo y se le manda la canción
 }
 window.__karaokeListo = () => enviarKaraoke(datosKaraoke());
+
+// PC: F11 abre o cierra el karaoke (segundo monitor si hay; si no, la misma pantalla)
+if (!esAndroid && window.oido.alKaraoke) {
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'F11') return;
+    e.preventDefault();
+    window.oido.karaokeLocal(!karaokeLocalActivo);
+  });
+  window.oido.alKaraoke('karaoke-abierto', () => { karaokeLocalActivo = true; enviarKaraoke(datosKaraoke()); });
+  window.oido.alKaraoke('karaoke-cerrado', () => { karaokeLocalActivo = false; });
+  $('#pista-karaoke').hidden = false;
+}
 // Con la letra completa abierta el teléfono puede girar y la pantalla no se apaga
 function avisarLetraCompleta() {
   if (!esAndroid || letraCompletaAvisada === pantallaLetra) return;
@@ -1391,7 +1425,7 @@ function aplicarTema(h) {
   for (const [k, v] of Object.entries(colores(h))) document.documentElement.style.setProperty(k, v);
   try { localStorage.setItem('oido-tono', h); } catch {}
   if (window.alCambiarFondo) window.alCambiarFondo(hslAHex(h, 22, 7));
-  if (typeof karaokeCancion === 'function') karaokeCancion();
+  if (typeof enviarKaraoke === 'function') enviarKaraoke({ tipo: 'tema', tema: colores(h) });
 }
 function prepararTema() {
   let h = 175;
@@ -1401,19 +1435,47 @@ function prepararTema() {
   aplicarTema(h);
   $('#btn-tema').innerHTML = icono('tema', 22);
   $('#btn-tema').onclick = () => panel.classList.toggle('abierto');
-  barra.addEventListener('input', () => aplicarTema(barra.value));
+  barra.addEventListener('input', () => { activarDinamico(false); aplicarTema(barra.value); });
   const puntos = $('#puntos');
   TONOS.forEach(t => {
     const b = document.createElement('button');
     b.className = 'punto';
     b.style.background = `hsl(${t} 75% 60%)`;
     b.setAttribute('aria-label', 'Tono ' + t);
-    b.onclick = () => { barra.value = t; aplicarTema(t); };
+    b.onclick = () => { activarDinamico(false); barra.value = t; aplicarTema(t); };
     puntos.appendChild(b);
   });
   $('#tema-listo').onclick = () => panel.classList.remove('abierto');
+
+  // Dinámico: el tono avanza 1 grado cada 2 segundos (una vuelta completa en ~12 minutos)
+  let reloj = null;
+  function activarDinamico(on) {
+    clearInterval(reloj);
+    $('#btn-dinamico').classList.toggle('activo', on);
+    $('#btn-dinamico').setAttribute('aria-pressed', on);
+    try { localStorage.setItem('oido-dinamico', on ? '1' : '0'); } catch {}
+    if (on) reloj = setInterval(() => {
+      const nuevo = (tonoActual + 1) % 360;
+      barra.value = nuevo;
+      aplicarTema(nuevo);
+    }, 2000);
+  }
+  $('#btn-dinamico').onclick = () => activarDinamico(!$('#btn-dinamico').classList.contains('activo'));
+  try { if (localStorage.getItem('oido-dinamico') === '1') activarDinamico(true); } catch {}
+
+  // Compartir Oído: el enlace a la última versión
+  $('#btn-compartir-app').innerHTML = icono('compartir', 18) + '<span>Compartir Oído</span>';
+  $('#btn-compartir-app').onclick = async () => {
+    const enlace = 'https://github.com/KALAVER084/oido/releases/latest';
+    const texto = 'Oído: escucha YouTube sin anuncios, en segundo plano y con letras. ' +
+      'Descárgalo aquí (Android pedirá permiso para instalarlo): ' + enlace;
+    if (window.oido.compartirTexto) return window.oido.compartirTexto(texto);
+    try { await (window.oido.copiar ? window.oido.copiar(texto) : navigator.clipboard.writeText(texto)); avisar('Enlace de Oído copiado'); }
+    catch { avisar('No se pudo copiar'); }
+  };
 }
 prepararTema();
+$('#btn-buscar').innerHTML = icono('buscar', 22);
 $('#ant').innerHTML = icono('prev', 22);
 $('#sig').innerHTML = icono('next', 22);
 $('#play').innerHTML = icono('play', 26);

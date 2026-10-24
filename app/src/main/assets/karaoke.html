@@ -102,9 +102,13 @@ function mostrar(id) {
   document.querySelectorAll('.vista').forEach(v => v.classList.toggle('visible', v.id === id));
 }
 
+function aplicarColores(tema) {
+  if (tema) for (const [k, v] of Object.entries(tema)) document.documentElement.style.setProperty(k, v);
+}
+
 function pintar() {
   const c = cancion || {};
-  if (c.tema) for (const [k, v] of Object.entries(c.tema)) document.documentElement.style.setProperty(k, v);
+  aplicarColores(c.tema);
   $('#tit').textContent = c.titulo || '';
   $('#art').textContent = c.canal || '';
   $('#solo-tit').textContent = c.titulo || 'Oído';
@@ -173,6 +177,8 @@ window.addEventListener('resize', () => centrar(false));
 function recibir(m) {
   if (!m || typeof m !== 'object') return;
   if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
+  // Solo cambió el color (tema dinámico o elegido): se repinta sin reiniciar la letra
+  else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
 }
 // ---------- Fondo animado: un estilo al azar por canción, con los colores del tema ----------
@@ -282,13 +288,15 @@ const Fondo = (() => {
   requestAnimationFrame(bucle);
 
   return {
+    colores(tema) {
+      if (!tema) return;
+      const h = /hsl\(\s*([\d.]+)/.exec(tema['--acento'] || '');
+      A = rgb(tema['--acento']) || A;
+      T = rgb(tema['--texto']) || T;
+      if (h) C = rgb(`hsl(${h[1]} 70% 78%)`) || C;
+    },
     cancion(m) {
-      if (m.tema) {
-        const h = /hsl\(\s*([\d.]+)/.exec(m.tema['--acento'] || '');
-        A = rgb(m.tema['--acento']) || A;
-        T = rgb(m.tema['--texto']) || T;
-        if (h) C = rgb(`hsl(${h[1]} 70% 78%)`) || C;
-      }
+      this.colores(m.tema);
       const k = (m.titulo || '') + '|' + (m.canal || '');
       if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): mismo fondo
       clave = k;
