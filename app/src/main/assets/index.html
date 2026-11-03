@@ -123,6 +123,9 @@
     width: 2.8rem; height: 2.8rem; color: var(--suave);
   }
   .controles #btn-letra:hover { color: var(--acento); }
+  /* Compartir Oído: a la izquierda, en espejo del botón de letra */
+  .controles #btn-compartir-oido { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--suave); }
+  .controles #btn-compartir-oido:hover { color: var(--acento); }
   .controles #btn-letra.activo { color: var(--acento); }
   .controles #btn-letra.lleno { color: var(--acento); background: var(--tinte); }
   #franja {
@@ -276,6 +279,7 @@
       <button id="play" aria-label="Reproducir"></button>
       <button id="sig" aria-label="Siguiente"></button>
       <button id="btn-letra" hidden aria-label="Letra"></button>
+      <button id="btn-compartir-oido" aria-label="Compartir Oído" title="Compartir Oído"></button>
     </div>
   </div>
 </section>
@@ -433,6 +437,7 @@ const ICONOS = {
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
   letra: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none"/>',
   buscar: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  compartirOido: '<circle cx="4.5" cy="12" r="2"/><circle cx="11" cy="5.5" r="2"/><circle cx="11" cy="18.5" r="2"/><path d="M6.3 11l3-3.9M6.3 13l3 3.9"/><circle cx="15.6" cy="12" r="1.1" fill="currentColor"/><path d="M18 9.5a3.5 3.5 0 0 1 0 5M20.5 7a7 7 0 0 1 0 10"/>',
   compartir: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
   deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -1464,8 +1469,9 @@ function prepararTema() {
   try { if (localStorage.getItem('oido-dinamico') === '1') activarDinamico(true); } catch {}
 
   // Compartir Oído: el enlace a la última versión
-  $('#btn-compartir-app').innerHTML = icono('compartir', 18) + '<span>Compartir Oído</span>';
-  $('#btn-compartir-app').onclick = async () => {
+  $('#btn-compartir-app').innerHTML = icono('compartirOido', 18) + '<span>Compartir Oído</span>';
+  $('#btn-compartir-oido').innerHTML = icono('compartirOido', 24);
+  $('#btn-compartir-app').onclick = $('#btn-compartir-oido').onclick = async () => {
     const enlace = 'https://github.com/KALAVER084/oido/releases/latest';
     const texto = 'Oído: escucha YouTube sin anuncios, en segundo plano y con letras. ' +
       'Descárgalo aquí (Android pedirá permiso para instalarlo): ' + enlace;
