@@ -47,6 +47,7 @@ Oído hace una sola cosa: **buscar en YouTube y reproducir solo el audio**.
 - **Tema a tu gusto:** eliges un color y la app ajusta fondo, texto y acentos, o activas el modo **Dinámico** para que los colores cambien solos, despacio.
 - **Sincroniza tú la letra:** si una letra va desfasada (en vivos o videoclips), la ajustas con un toque y con ajuste fino; la app lo recuerda para ese audio.
 - **Se actualiza sola:** te avisa dentro de la app cuando hay versión nueva.
+- **En tu idioma:** español, English, Português, Français, Deutsch y 日本語. Toma el idioma del teléfono, o lo eliges en el panel del tema.
 
 ## Instalación
 

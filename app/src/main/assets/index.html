@@ -16,7 +16,7 @@
   html, body { height: 100%; }
   body {
     margin: 0; background: var(--fondo); color: var(--texto);
-    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
     display: flex; flex-direction: column; overscroll-behavior: none;
   }
   .ancho { max-width: 46rem; margin: 0 auto; width: 100%; }
@@ -63,6 +63,8 @@
     background: conic-gradient(hsl(0 75% 60%), hsl(60 75% 60%), hsl(120 75% 60%), hsl(180 75% 60%), hsl(240 75% 60%), hsl(300 75% 60%), hsl(360 75% 60%)); }
   #btn-dinamico.activo .arcoiris { animation: girar 6s linear infinite; }
   @keyframes girar { to { transform: rotate(360deg); } }
+  .fila-idioma { display: flex; align-items: center; gap: .5rem; color: var(--suave); font-size: .9rem; }
+  #idioma { font: inherit; color: var(--texto); background: var(--fondo); border: 1px solid var(--linea); border-radius: 8px; padding: .3rem .5rem; }
   #btn-compartir-app { display: flex; align-items: center; gap: .45rem; color: var(--acento); padding: .3rem 0; }
   .fila-tema { flex-wrap: wrap; gap: .6rem; }
   #tema-listo { color: var(--acento); padding: .3rem .5rem; }
@@ -197,25 +199,26 @@
   <div class="ancho">
     <div id="actualizacion" hidden>
       <span></span>
-      <button type="button" class="descargar">Descargar</button>
-      <button type="button" class="cerrar" aria-label="Ahora no">Ahora no</button>
+      <button type="button" class="descargar" data-t="descargar">Descargar</button>
+      <button type="button" class="cerrar" data-t="ahoraNo">Ahora no</button>
     </div>
     <form id="f">
-      <input id="q" type="search" placeholder="Buscar en YouTube" autocomplete="off" enterkeyhint="search">
-      <button class="primario" id="btn-buscar" aria-label="Buscar" title="Buscar"></button>
-      <button type="button" id="btn-tema" title="Tema" aria-label="Cambiar tema"></button>
+      <input id="q" type="search" data-t-ph="buscarEnYoutube" placeholder="Buscar en YouTube" autocomplete="off" enterkeyhint="search">
+      <button class="primario" id="btn-buscar" data-t-aria="buscar" data-t-title="buscar" aria-label="Buscar" title="Buscar"></button>
+      <button type="button" id="btn-tema" data-t-title="tema" data-t-aria="cambiarTema" title="Tema" aria-label="Cambiar tema"></button>
     </form>
     <div id="panel-tema">
-      <input id="tono" type="range" min="0" max="359" step="1" aria-label="Tono del tema">
+      <input id="tono" type="range" min="0" max="359" step="1" data-t-aria="tonoTema" aria-label="Tono del tema">
       <div class="fila-tema">
         <div id="puntos"></div>
-        <button type="button" id="btn-dinamico" aria-pressed="false" title="Los colores cambian solos, despacio">
-          <span class="arcoiris"></span>Dinámico
+        <button type="button" id="btn-dinamico" aria-pressed="false" data-t-title="dinamicoTitulo" title="Los colores cambian solos, despacio">
+          <span class="arcoiris"></span><span data-t="dinamico">Dinámico</span>
         </button>
       </div>
       <div class="fila-tema">
         <button type="button" id="btn-compartir-app"></button>
-        <button type="button" id="tema-listo">Listo</button>
+        <label class="fila-idioma"><span data-t="idioma">Idioma</span> <select id="idioma"></select></label>
+        <button type="button" id="tema-listo" data-t="listo">Listo</button>
       </div>
     </div>
     <nav id="pestanas"></nav>
@@ -230,33 +233,33 @@
 <section id="pantalla-letra" hidden>
   <div class="ancho cab-letra">
     <span id="letra-titulo"></span>
-    <span id="pista-karaoke" hidden title="Karaoke a pantalla completa">F11 · Karaoke</span>
+    <span id="pista-karaoke" hidden data-t="f11Karaoke" data-t-title="karaokeCompleto">F11 · Karaoke</span>
     <span class="acciones-letra">
-      <button id="btn-deshacer" hidden title="Deshacer ajuste" aria-label="Deshacer ajuste"></button>
-      <button id="btn-sync" hidden aria-label="Sincronizar letra"></button>
-      <button id="btn-cancelar-sync" hidden>Cancelar</button>
+      <button id="btn-deshacer" hidden data-t-title="deshacerAjuste" data-t-aria="deshacerAjuste"></button>
+      <button id="btn-sync" hidden data-t-aria="sincronizarLetra"></button>
+      <button id="btn-cancelar-sync" hidden data-t="cancelar">Cancelar</button>
     </span>
   </div>
   <div class="zona-letra">
     <div id="letra-cuerpo" class="ancho"></div>
   </div>
   <div class="pie-sync">
-    <p id="pista-sync" hidden>Desliza hasta que se pinte la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse</p>
+    <p id="pista-sync" hidden data-t-html="pistaSync"></p>
     <p id="elegida" hidden></p>
-    <button id="btn-ahora" class="primario" hidden>¡Ahora!</button>
+    <button id="btn-ahora" class="primario" hidden data-t="ahora">¡Ahora!</button>
     <div id="panel-fino" hidden>
-      <p class="tit-fino">Ajuste fino · la letra sigue sonando mientras ajustas</p>
+      <p class="tit-fino" data-t="tituloFino"></p>
       <div class="fila-fino">
-        <button data-d="-1000" aria-label="Adelantar la letra 1 segundo">« 1 s</button>
-        <button data-d="-250" aria-label="Adelantar la letra 0,25 segundos">‹ 0,25</button>
+        <button data-d="-1000" data-t-aria="adelantar1">« 1 s</button>
+        <button data-d="-250" data-t-aria="adelantar025">‹ 0,25</button>
         <span id="valor-fino"></span>
-        <button data-d="250" aria-label="Atrasar la letra 0,25 segundos">0,25 ›</button>
-        <button data-d="1000" aria-label="Atrasar la letra 1 segundo">1 s »</button>
+        <button data-d="250" data-t-aria="atrasar025">0,25 ›</button>
+        <button data-d="1000" data-t-aria="atrasar1">1 s »</button>
       </div>
-      <div class="lab-fino"><span>La letra va tarde</span><span>La letra va adelantada</span></div>
+      <div class="lab-fino"><span data-t="letraTarde"></span><span data-t="letraAdelantada"></span></div>
       <div class="acc-fino">
-        <button id="fino-cero" class="enlace">⟳ Sincronizar desde cero</button>
-        <button id="fino-listo" class="primario">Listo</button>
+        <button id="fino-cero" class="enlace" data-t="desdeCero"></button>
+        <button id="fino-listo" class="primario" data-t="listo"></button>
       </div>
     </div>
   </div>
@@ -273,15 +276,15 @@
     </div>
     <div class="tiempo">
       <span id="t-pos">0:00</span>
-      <input id="progreso" type="range" min="0" max="0" value="0" step="1000" aria-label="Posición">
+      <input id="progreso" type="range" min="0" max="0" value="0" step="1000" data-t-aria="posicion">
       <span id="t-dur"></span>
     </div>
     <div class="controles">
-      <button id="ant" aria-label="Anterior"></button>
-      <button id="play" aria-label="Reproducir"></button>
-      <button id="sig" aria-label="Siguiente"></button>
-      <button id="btn-letra" hidden aria-label="Letra"></button>
-      <button id="btn-compartir-oido" aria-label="Compartir Oído" title="Compartir Oído"></button>
+      <button id="ant" data-t-aria="anterior"></button>
+      <button id="play" data-t-aria="reproducir"></button>
+      <button id="sig" data-t-aria="siguiente"></button>
+      <button id="btn-letra" hidden data-t-aria="letra"></button>
+      <button id="btn-compartir-oido" data-t-aria="compartirOido" data-t-title="compartirOido"></button>
     </div>
   </div>
 </section>
@@ -425,6 +428,259 @@ if (window.OidoNativo) {
   })();
 }
 
+// ---------- Idiomas ----------
+// Cada texto visible tiene una clave; {n}, {v}, etc. se reemplazan al usarlo.
+// Para agregar un idioma: copiar el bloque "en", traducirlo y añadirlo a IDIOMAS.
+const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
+const TEXTOS = {
+  es: {
+    buscarEnYoutube: 'Buscar en YouTube', buscar: 'Buscar', cambiarTema: 'Cambiar tema', tema: 'Tema', tonoTema: 'Tono del tema', tono: 'Tono {n}',
+    listo: 'Listo', dinamico: 'Dinámico', dinamicoTitulo: 'Los colores cambian solos, despacio', idioma: 'Idioma', automatico: 'Automático',
+    compartirOido: 'Compartir Oído', anterior: 'Anterior', siguiente: 'Siguiente', reproducir: 'Reproducir', pausar: 'Pausar', posicion: 'Posición', letra: 'Letra',
+    buscaAlgo: 'Busca algo para escuchar. Las listas y mixes de YouTube también aparecen.',
+    resultados: 'Resultados', misListas: 'Mis listas', cargandoPuntos: 'Cargando…', buscando: 'Buscando…',
+    relevancia: 'Relevancia', masNuevos: 'Más nuevos', masViejos: 'Más viejos', cambiarOrden: 'Cambiar orden',
+    todo: 'Todo', audiosChip: 'Audios', listasYMixes: 'Listas y mixes',
+    audio1: '1 audio', audiosN: '{n} audios', resumen: '{a} y {l}', lm1: '1 lista o mix', lmN: '{n} listas o mixes',
+    sinResultados: 'Sin resultados. Prueba otras palabras.', noBuscar: 'No se pudo buscar. Revisa tu conexión a internet.',
+    carpetaExt: 'Carpeta de extensiones', cargandoAudios: 'Cargando audios…', noAbrirLista: 'No se pudo abrir. Prueba otra vez o elige otra lista.',
+    reproducirTodo: 'Reproducir todo', guardarEnMisListas: 'Guardar en mis listas', listaGuardada: 'Lista guardada', cerrar: 'Cerrar',
+    nombreNuevaLista: 'Nombre de la nueva lista', crearLista: 'Crear lista', guardarCopia: 'Guardar copia', enviar: 'Enviar', importar: 'Importar',
+    volverMisListas: '← Mis listas', enLaLista: '{n} en la lista', listaVacia: 'Lista vacía. Busca algo y usa + para añadir audios aquí.',
+    borrarLista: 'Borrar lista', sinListas: 'Aún no tienes listas. Crea una aquí arriba o usa + en cualquier resultado.',
+    sonando: 'Sonando', renombrar: 'Renombrar', letraAjustada: 'letra ajustada', mix: 'Mix', lista: 'Lista', enVivo: 'EN VIVO', enVivoPunto: '● EN VIVO',
+    copiarEnlace: 'Copiar enlace', anadirTodosALista: 'Añadir todos sus audios a una lista', anadirALista: 'Añadir a una lista',
+    subir: 'Subir', bajar: 'Bajar', quitarDeLista: 'Quitar de la lista', confirmarBorrar: '¿Borrar la lista "{nombre}"?',
+    anadirTodosA: 'Añadir todos sus audios a…', anadirA: 'Añadir a…', nuevaListaEnter: 'Nueva lista y Enter',
+    cargandoDos: 'Cargando: ', noCargar: 'No se pudo cargar: ', motivo: 'Motivo: ', listaDos: 'Lista: ', deTotal: '{i} de {n}',
+    versionNueva: 'Hay una versión nueva de Oído ({v})', descargar: 'Descargar', ahoraNo: 'Ahora no',
+    enlaceCopiado: 'Enlace copiado', noCopiarEnlace: 'No se pudo copiar el enlace', copiaGuardada: 'Copia guardada', noGuardarCopia: 'No se pudo guardar la copia',
+    noEnviar: 'No se pudo enviar', noAbrirArchivo: 'No se pudo abrir el archivo', noRespaldo: 'Ese archivo no es un respaldo de Oído',
+    lista1: '1 lista nueva', listasN: '{n} listas nuevas', importado: 'Importado: {l}, {a}', nadaNuevo: 'No había nada nuevo que importar',
+    cerrarLetra: 'Cerrar letra', letraCompleta: 'Letra en pantalla completa', verLetraFija: 'Ver letra (sin sincronizar)', mostrarLetra: 'Mostrar letra',
+    sinLetra: 'Sin letra para esta canción', buscandoLetra: 'Buscando letra…',
+    fijaConTiempos: 'Letra sin sincronizar: toca ⟳ y desliza hasta la línea que suena', fijaSinTiempos: 'Letra sin sincronizar (esta versión dura distinto)',
+    sincronizarLetra: 'Sincronizar letra', volverASincronizar: 'Volver a sincronizar', deshacerAjuste: 'Deshacer ajuste', cancelar: 'Cancelar',
+    pistaSync: 'Desliza hasta que se pinte la línea que viene y toca <b>¡Ahora!</b> justo cuando empiece a cantarse', ahora: '¡Ahora!',
+    marcaras: 'Marcarás: “{t}”', letraSincronizada: 'Letra sincronizada', ajusteEliminado: 'Ajuste eliminado',
+    tituloFino: 'Ajuste fino · la letra sigue sonando mientras ajustas', letraTarde: 'La letra va tarde', letraAdelantada: 'La letra va adelantada',
+    adelantar1: 'Adelantar la letra 1 segundo', adelantar025: 'Adelantar la letra 0,25 segundos', atrasar025: 'Atrasar la letra 0,25 segundos', atrasar1: 'Atrasar la letra 1 segundo',
+    desdeCero: '⟳ Sincronizar desde cero', f11Karaoke: 'F11 · Karaoke', karaokeCompleto: 'Karaoke a pantalla completa',
+    mensajeCompartir: 'Oído: escucha YouTube sin anuncios, en segundo plano y con letras. Descárgalo aquí (Android pedirá permiso para instalarlo): {enlace}',
+    enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
+  },
+  en: {
+    buscarEnYoutube: 'Search YouTube', buscar: 'Search', cambiarTema: 'Change theme', tema: 'Theme', tonoTema: 'Theme hue', tono: 'Hue {n}',
+    listo: 'Done', dinamico: 'Dynamic', dinamicoTitulo: 'Colors change on their own, slowly', idioma: 'Language', automatico: 'Automatic',
+    compartirOido: 'Share Oído', anterior: 'Previous', siguiente: 'Next', reproducir: 'Play', pausar: 'Pause', posicion: 'Position', letra: 'Lyrics',
+    buscaAlgo: 'Search for something to listen to. YouTube playlists and mixes show up too.',
+    resultados: 'Results', misListas: 'My lists', cargandoPuntos: 'Loading…', buscando: 'Searching…',
+    relevancia: 'Relevance', masNuevos: 'Newest', masViejos: 'Oldest', cambiarOrden: 'Change order',
+    todo: 'All', audiosChip: 'Tracks', listasYMixes: 'Playlists & mixes',
+    audio1: '1 track', audiosN: '{n} tracks', resumen: '{a} and {l}', lm1: '1 playlist or mix', lmN: '{n} playlists or mixes',
+    sinResultados: 'No results. Try other words.', noBuscar: "Couldn't search. Check your internet connection.",
+    carpetaExt: 'Extensions folder', cargandoAudios: 'Loading tracks…', noAbrirLista: "Couldn't open it. Try again or pick another list.",
+    reproducirTodo: 'Play all', guardarEnMisListas: 'Save to my lists', listaGuardada: 'Saved list', cerrar: 'Close',
+    nombreNuevaLista: 'New list name', crearLista: 'Create list', guardarCopia: 'Save a copy', enviar: 'Send', importar: 'Import',
+    volverMisListas: '← My lists', enLaLista: '{n} in this list', listaVacia: 'Empty list. Search for something and use + to add tracks here.',
+    borrarLista: 'Delete list', sinListas: "You don't have any lists yet. Create one above or use + on any result.",
+    sonando: 'Playing', renombrar: 'Rename', letraAjustada: 'lyrics adjusted', mix: 'Mix', lista: 'Playlist', enVivo: 'LIVE', enVivoPunto: '● LIVE',
+    copiarEnlace: 'Copy link', anadirTodosALista: 'Add all its tracks to a list', anadirALista: 'Add to a list',
+    subir: 'Move up', bajar: 'Move down', quitarDeLista: 'Remove from list', confirmarBorrar: 'Delete the list "{nombre}"?',
+    anadirTodosA: 'Add all its tracks to…', anadirA: 'Add to…', nuevaListaEnter: 'New list, then Enter',
+    cargandoDos: 'Loading: ', noCargar: "Couldn't load: ", motivo: 'Reason: ', listaDos: 'List: ', deTotal: '{i} of {n}',
+    versionNueva: 'A new version of Oído is available ({v})', descargar: 'Download', ahoraNo: 'Not now',
+    enlaceCopiado: 'Link copied', noCopiarEnlace: "Couldn't copy the link", copiaGuardada: 'Copy saved', noGuardarCopia: "Couldn't save the copy",
+    noEnviar: "Couldn't send", noAbrirArchivo: "Couldn't open the file", noRespaldo: "That file isn't an Oído backup",
+    lista1: '1 new list', listasN: '{n} new lists', importado: 'Imported: {l}, {a}', nadaNuevo: 'There was nothing new to import',
+    cerrarLetra: 'Close lyrics', letraCompleta: 'Full-screen lyrics', verLetraFija: 'View lyrics (not synced)', mostrarLetra: 'Show lyrics',
+    sinLetra: 'No lyrics for this song', buscandoLetra: 'Looking for lyrics…',
+    fijaConTiempos: 'Lyrics not synced: tap ⟳ and scroll to the line being sung', fijaSinTiempos: 'Lyrics not synced (this version has a different length)',
+    sincronizarLetra: 'Sync lyrics', volverASincronizar: 'Sync again', deshacerAjuste: 'Undo adjustment', cancelar: 'Cancel',
+    pistaSync: 'Scroll until the next line lights up, then tap <b>Now!</b> right when it starts being sung', ahora: 'Now!',
+    marcaras: 'You’ll mark: “{t}”', letraSincronizada: 'Lyrics synced', ajusteEliminado: 'Adjustment removed',
+    tituloFino: 'Fine tuning · the song keeps playing while you adjust', letraTarde: 'Lyrics are late', letraAdelantada: 'Lyrics are early',
+    adelantar1: 'Move lyrics 1 second earlier', adelantar025: 'Move lyrics 0.25 seconds earlier', atrasar025: 'Move lyrics 0.25 seconds later', atrasar1: 'Move lyrics 1 second later',
+    desdeCero: '⟳ Sync from scratch', f11Karaoke: 'F11 · Karaoke', karaokeCompleto: 'Full-screen karaoke',
+    mensajeCompartir: 'Oído: listen to YouTube without ads, in the background and with lyrics. Download it here (Android will ask permission to install it): {enlace}',
+    enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
+  },
+  pt: {
+    buscarEnYoutube: 'Pesquisar no YouTube', buscar: 'Pesquisar', cambiarTema: 'Mudar tema', tema: 'Tema', tonoTema: 'Tom do tema', tono: 'Tom {n}',
+    listo: 'Pronto', dinamico: 'Dinâmico', dinamicoTitulo: 'As cores mudam sozinhas, devagar', idioma: 'Idioma', automatico: 'Automático',
+    compartirOido: 'Compartilhar o Oído', anterior: 'Anterior', siguiente: 'Próxima', reproducir: 'Tocar', pausar: 'Pausar', posicion: 'Posição', letra: 'Letra',
+    buscaAlgo: 'Pesquise algo para ouvir. Playlists e mixes do YouTube também aparecem.',
+    resultados: 'Resultados', misListas: 'Minhas listas', cargandoPuntos: 'Carregando…', buscando: 'Pesquisando…',
+    relevancia: 'Relevância', masNuevos: 'Mais recentes', masViejos: 'Mais antigos', cambiarOrden: 'Mudar ordem',
+    todo: 'Tudo', audiosChip: 'Áudios', listasYMixes: 'Playlists e mixes',
+    audio1: '1 áudio', audiosN: '{n} áudios', resumen: '{a} e {l}', lm1: '1 playlist ou mix', lmN: '{n} playlists ou mixes',
+    sinResultados: 'Nenhum resultado. Tente outras palavras.', noBuscar: 'Não foi possível pesquisar. Verifique sua conexão com a internet.',
+    carpetaExt: 'Pasta de extensões', cargandoAudios: 'Carregando áudios…', noAbrirLista: 'Não foi possível abrir. Tente de novo ou escolha outra lista.',
+    reproducirTodo: 'Tocar tudo', guardarEnMisListas: 'Salvar em minhas listas', listaGuardada: 'Lista salva', cerrar: 'Fechar',
+    nombreNuevaLista: 'Nome da nova lista', crearLista: 'Criar lista', guardarCopia: 'Salvar cópia', enviar: 'Enviar', importar: 'Importar',
+    volverMisListas: '← Minhas listas', enLaLista: '{n} na lista', listaVacia: 'Lista vazia. Pesquise algo e use + para adicionar áudios aqui.',
+    borrarLista: 'Apagar lista', sinListas: 'Você ainda não tem listas. Crie uma aqui em cima ou use + em qualquer resultado.',
+    sonando: 'Tocando', renombrar: 'Renomear', letraAjustada: 'letra ajustada', mix: 'Mix', lista: 'Playlist', enVivo: 'AO VIVO', enVivoPunto: '● AO VIVO',
+    copiarEnlace: 'Copiar link', anadirTodosALista: 'Adicionar todos os áudios a uma lista', anadirALista: 'Adicionar a uma lista',
+    subir: 'Subir', bajar: 'Descer', quitarDeLista: 'Tirar da lista', confirmarBorrar: 'Apagar a lista "{nombre}"?',
+    anadirTodosA: 'Adicionar todos os áudios a…', anadirA: 'Adicionar a…', nuevaListaEnter: 'Nova lista e Enter',
+    cargandoDos: 'Carregando: ', noCargar: 'Não foi possível carregar: ', motivo: 'Motivo: ', listaDos: 'Lista: ', deTotal: '{i} de {n}',
+    versionNueva: 'Há uma nova versão do Oído ({v})', descargar: 'Baixar', ahoraNo: 'Agora não',
+    enlaceCopiado: 'Link copiado', noCopiarEnlace: 'Não foi possível copiar o link', copiaGuardada: 'Cópia salva', noGuardarCopia: 'Não foi possível salvar a cópia',
+    noEnviar: 'Não foi possível enviar', noAbrirArchivo: 'Não foi possível abrir o arquivo', noRespaldo: 'Esse arquivo não é um backup do Oído',
+    lista1: '1 lista nova', listasN: '{n} listas novas', importado: 'Importado: {l}, {a}', nadaNuevo: 'Não havia nada novo para importar',
+    cerrarLetra: 'Fechar letra', letraCompleta: 'Letra em tela cheia', verLetraFija: 'Ver letra (não sincronizada)', mostrarLetra: 'Mostrar letra',
+    sinLetra: 'Sem letra para esta música', buscandoLetra: 'Procurando letra…',
+    fijaConTiempos: 'Letra não sincronizada: toque em ⟳ e deslize até a linha que está tocando', fijaSinTiempos: 'Letra não sincronizada (esta versão tem outra duração)',
+    sincronizarLetra: 'Sincronizar letra', volverASincronizar: 'Sincronizar de novo', deshacerAjuste: 'Desfazer ajuste', cancelar: 'Cancelar',
+    pistaSync: 'Deslize até a próxima linha se destacar e toque em <b>Agora!</b> bem quando ela começar a ser cantada', ahora: 'Agora!',
+    marcaras: 'Você vai marcar: “{t}”', letraSincronizada: 'Letra sincronizada', ajusteEliminado: 'Ajuste removido',
+    tituloFino: 'Ajuste fino · a música continua tocando enquanto você ajusta', letraTarde: 'A letra está atrasada', letraAdelantada: 'A letra está adiantada',
+    adelantar1: 'Adiantar a letra 1 segundo', adelantar025: 'Adiantar a letra 0,25 segundo', atrasar025: 'Atrasar a letra 0,25 segundo', atrasar1: 'Atrasar a letra 1 segundo',
+    desdeCero: '⟳ Sincronizar do zero', f11Karaoke: 'F11 · Karaokê', karaokeCompleto: 'Karaokê em tela cheia',
+    mensajeCompartir: 'Oído: ouça o YouTube sem anúncios, em segundo plano e com letras. Baixe aqui (o Android vai pedir permissão para instalar): {enlace}',
+    enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
+  },
+  fr: {
+    buscarEnYoutube: 'Rechercher sur YouTube', buscar: 'Rechercher', cambiarTema: 'Changer de thème', tema: 'Thème', tonoTema: 'Teinte du thème', tono: 'Teinte {n}',
+    listo: 'OK', dinamico: 'Dynamique', dinamicoTitulo: 'Les couleurs changent toutes seules, lentement', idioma: 'Langue', automatico: 'Automatique',
+    compartirOido: 'Partager Oído', anterior: 'Précédent', siguiente: 'Suivant', reproducir: 'Lire', pausar: 'Pause', posicion: 'Position', letra: 'Paroles',
+    buscaAlgo: 'Cherchez quelque chose à écouter. Les playlists et mix YouTube apparaissent aussi.',
+    resultados: 'Résultats', misListas: 'Mes listes', cargandoPuntos: 'Chargement…', buscando: 'Recherche…',
+    relevancia: 'Pertinence', masNuevos: 'Plus récents', masViejos: 'Plus anciens', cambiarOrden: 'Changer l’ordre',
+    todo: 'Tout', audiosChip: 'Titres', listasYMixes: 'Playlists et mix',
+    audio1: '1 titre', audiosN: '{n} titres', resumen: '{a} et {l}', lm1: '1 playlist ou mix', lmN: '{n} playlists ou mix',
+    sinResultados: 'Aucun résultat. Essayez d’autres mots.', noBuscar: 'Recherche impossible. Vérifiez votre connexion internet.',
+    carpetaExt: 'Dossier des extensions', cargandoAudios: 'Chargement des titres…', noAbrirLista: 'Impossible d’ouvrir. Réessayez ou choisissez une autre liste.',
+    reproducirTodo: 'Tout lire', guardarEnMisListas: 'Enregistrer dans mes listes', listaGuardada: 'Liste enregistrée', cerrar: 'Fermer',
+    nombreNuevaLista: 'Nom de la nouvelle liste', crearLista: 'Créer la liste', guardarCopia: 'Enregistrer une copie', enviar: 'Envoyer', importar: 'Importer',
+    volverMisListas: '← Mes listes', enLaLista: '{n} dans la liste', listaVacia: 'Liste vide. Cherchez quelque chose et utilisez + pour ajouter des titres ici.',
+    borrarLista: 'Supprimer la liste', sinListas: 'Vous n’avez pas encore de listes. Créez-en une ci-dessus ou utilisez + sur un résultat.',
+    sonando: 'En cours', renombrar: 'Renommer', letraAjustada: 'paroles ajustées', mix: 'Mix', lista: 'Playlist', enVivo: 'EN DIRECT', enVivoPunto: '● EN DIRECT',
+    copiarEnlace: 'Copier le lien', anadirTodosALista: 'Ajouter tous ses titres à une liste', anadirALista: 'Ajouter à une liste',
+    subir: 'Monter', bajar: 'Descendre', quitarDeLista: 'Retirer de la liste', confirmarBorrar: 'Supprimer la liste « {nombre} » ?',
+    anadirTodosA: 'Ajouter tous ses titres à…', anadirA: 'Ajouter à…', nuevaListaEnter: 'Nouvelle liste puis Entrée',
+    cargandoDos: 'Chargement : ', noCargar: 'Impossible de charger : ', motivo: 'Raison : ', listaDos: 'Liste : ', deTotal: '{i} sur {n}',
+    versionNueva: 'Une nouvelle version d’Oído est disponible ({v})', descargar: 'Télécharger', ahoraNo: 'Plus tard',
+    enlaceCopiado: 'Lien copié', noCopiarEnlace: 'Impossible de copier le lien', copiaGuardada: 'Copie enregistrée', noGuardarCopia: 'Impossible d’enregistrer la copie',
+    noEnviar: 'Envoi impossible', noAbrirArchivo: 'Impossible d’ouvrir le fichier', noRespaldo: 'Ce fichier n’est pas une sauvegarde d’Oído',
+    lista1: '1 nouvelle liste', listasN: '{n} nouvelles listes', importado: 'Importé : {l}, {a}', nadaNuevo: 'Rien de nouveau à importer',
+    cerrarLetra: 'Fermer les paroles', letraCompleta: 'Paroles en plein écran', verLetraFija: 'Voir les paroles (non synchronisées)', mostrarLetra: 'Afficher les paroles',
+    sinLetra: 'Pas de paroles pour cette chanson', buscandoLetra: 'Recherche des paroles…',
+    fijaConTiempos: 'Paroles non synchronisées : touchez ⟳ et faites défiler jusqu’à la ligne chantée', fijaSinTiempos: 'Paroles non synchronisées (cette version a une autre durée)',
+    sincronizarLetra: 'Synchroniser les paroles', volverASincronizar: 'Resynchroniser', deshacerAjuste: 'Annuler l’ajustement', cancelar: 'Annuler',
+    pistaSync: 'Faites défiler jusqu’à ce que la ligne suivante s’allume, puis touchez <b>Maintenant !</b> au moment où elle commence', ahora: 'Maintenant !',
+    marcaras: 'Vous allez marquer : « {t} »', letraSincronizada: 'Paroles synchronisées', ajusteEliminado: 'Ajustement supprimé',
+    tituloFino: 'Réglage fin · la chanson continue pendant que vous ajustez', letraTarde: 'Les paroles sont en retard', letraAdelantada: 'Les paroles sont en avance',
+    adelantar1: 'Avancer les paroles d’1 seconde', adelantar025: 'Avancer les paroles de 0,25 seconde', atrasar025: 'Retarder les paroles de 0,25 seconde', atrasar1: 'Retarder les paroles d’1 seconde',
+    desdeCero: '⟳ Resynchroniser depuis le début', f11Karaoke: 'F11 · Karaoké', karaokeCompleto: 'Karaoké en plein écran',
+    mensajeCompartir: 'Oído : écoutez YouTube sans pub, en arrière-plan et avec les paroles. Téléchargez-le ici (Android demandera l’autorisation de l’installer) : {enlace}',
+    enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
+  },
+  de: {
+    buscarEnYoutube: 'Auf YouTube suchen', buscar: 'Suchen', cambiarTema: 'Design ändern', tema: 'Design', tonoTema: 'Farbton des Designs', tono: 'Farbton {n}',
+    listo: 'Fertig', dinamico: 'Dynamisch', dinamicoTitulo: 'Die Farben ändern sich langsam von selbst', idioma: 'Sprache', automatico: 'Automatisch',
+    compartirOido: 'Oído teilen', anterior: 'Zurück', siguiente: 'Weiter', reproducir: 'Abspielen', pausar: 'Pause', posicion: 'Position', letra: 'Songtext',
+    buscaAlgo: 'Suche etwas zum Anhören. Auch YouTube-Playlists und -Mixe werden angezeigt.',
+    resultados: 'Ergebnisse', misListas: 'Meine Listen', cargandoPuntos: 'Wird geladen…', buscando: 'Suche läuft…',
+    relevancia: 'Relevanz', masNuevos: 'Neueste', masViejos: 'Älteste', cambiarOrden: 'Reihenfolge ändern',
+    todo: 'Alle', audiosChip: 'Titel', listasYMixes: 'Playlists & Mixe',
+    audio1: '1 Titel', audiosN: '{n} Titel', resumen: '{a} und {l}', lm1: '1 Playlist oder Mix', lmN: '{n} Playlists oder Mixe',
+    sinResultados: 'Keine Ergebnisse. Versuche andere Wörter.', noBuscar: 'Suche nicht möglich. Prüfe deine Internetverbindung.',
+    carpetaExt: 'Erweiterungsordner', cargandoAudios: 'Titel werden geladen…', noAbrirLista: 'Konnte nicht geöffnet werden. Versuche es erneut oder wähle eine andere Liste.',
+    reproducirTodo: 'Alle abspielen', guardarEnMisListas: 'In meinen Listen speichern', listaGuardada: 'Gespeicherte Liste', cerrar: 'Schließen',
+    nombreNuevaLista: 'Name der neuen Liste', crearLista: 'Liste erstellen', guardarCopia: 'Kopie speichern', enviar: 'Senden', importar: 'Importieren',
+    volverMisListas: '← Meine Listen', enLaLista: '{n} in der Liste', listaVacia: 'Leere Liste. Suche etwas und tippe auf +, um Titel hinzuzufügen.',
+    borrarLista: 'Liste löschen', sinListas: 'Du hast noch keine Listen. Erstelle oben eine oder tippe bei einem Ergebnis auf +.',
+    sonando: 'Läuft', renombrar: 'Umbenennen', letraAjustada: 'Text angepasst', mix: 'Mix', lista: 'Playlist', enVivo: 'LIVE', enVivoPunto: '● LIVE',
+    copiarEnlace: 'Link kopieren', anadirTodosALista: 'Alle Titel zu einer Liste hinzufügen', anadirALista: 'Zu einer Liste hinzufügen',
+    subir: 'Nach oben', bajar: 'Nach unten', quitarDeLista: 'Aus der Liste entfernen', confirmarBorrar: 'Liste „{nombre}“ löschen?',
+    anadirTodosA: 'Alle Titel hinzufügen zu…', anadirA: 'Hinzufügen zu…', nuevaListaEnter: 'Neue Liste und Enter',
+    cargandoDos: 'Wird geladen: ', noCargar: 'Konnte nicht geladen werden: ', motivo: 'Grund: ', listaDos: 'Liste: ', deTotal: '{i} von {n}',
+    versionNueva: 'Eine neue Version von Oído ist verfügbar ({v})', descargar: 'Herunterladen', ahoraNo: 'Später',
+    enlaceCopiado: 'Link kopiert', noCopiarEnlace: 'Link konnte nicht kopiert werden', copiaGuardada: 'Kopie gespeichert', noGuardarCopia: 'Kopie konnte nicht gespeichert werden',
+    noEnviar: 'Senden nicht möglich', noAbrirArchivo: 'Datei konnte nicht geöffnet werden', noRespaldo: 'Diese Datei ist keine Oído-Sicherung',
+    lista1: '1 neue Liste', listasN: '{n} neue Listen', importado: 'Importiert: {l}, {a}', nadaNuevo: 'Es gab nichts Neues zu importieren',
+    cerrarLetra: 'Songtext schließen', letraCompleta: 'Songtext im Vollbild', verLetraFija: 'Songtext ansehen (nicht synchronisiert)', mostrarLetra: 'Songtext anzeigen',
+    sinLetra: 'Kein Songtext für diesen Titel', buscandoLetra: 'Songtext wird gesucht…',
+    fijaConTiempos: 'Songtext nicht synchronisiert: tippe auf ⟳ und scrolle zur gesungenen Zeile', fijaSinTiempos: 'Songtext nicht synchronisiert (diese Version ist anders lang)',
+    sincronizarLetra: 'Songtext synchronisieren', volverASincronizar: 'Erneut synchronisieren', deshacerAjuste: 'Anpassung rückgängig machen', cancelar: 'Abbrechen',
+    pistaSync: 'Scrolle, bis die nächste Zeile aufleuchtet, und tippe auf <b>Jetzt!</b>, sobald sie gesungen wird', ahora: 'Jetzt!',
+    marcaras: 'Du markierst: „{t}“', letraSincronizada: 'Songtext synchronisiert', ajusteEliminado: 'Anpassung entfernt',
+    tituloFino: 'Feinabstimmung · der Titel läuft weiter, während du anpasst', letraTarde: 'Der Text ist zu spät', letraAdelantada: 'Der Text ist zu früh',
+    adelantar1: 'Text 1 Sekunde früher', adelantar025: 'Text 0,25 Sekunden früher', atrasar025: 'Text 0,25 Sekunden später', atrasar1: 'Text 1 Sekunde später',
+    desdeCero: '⟳ Von vorn synchronisieren', f11Karaoke: 'F11 · Karaoke', karaokeCompleto: 'Karaoke im Vollbild',
+    mensajeCompartir: 'Oído: YouTube ohne Werbung hören, im Hintergrund und mit Songtexten. Hier herunterladen (Android fragt nach der Erlaubnis zur Installation): {enlace}',
+    enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
+  },
+  ja: {
+    buscarEnYoutube: 'YouTube を検索', buscar: '検索', cambiarTema: 'テーマを変更', tema: 'テーマ', tonoTema: 'テーマの色合い', tono: '色合い {n}',
+    listo: '完了', dinamico: 'ダイナミック', dinamicoTitulo: '色がゆっくり自動で変わります', idioma: '言語', automatico: '自動',
+    compartirOido: 'Oído を共有', anterior: '前へ', siguiente: '次へ', reproducir: '再生', pausar: '一時停止', posicion: '再生位置', letra: '歌詞',
+    buscaAlgo: '聴きたいものを検索しましょう。YouTube の再生リストやミックスも表示されます。',
+    resultados: '検索結果', misListas: 'マイリスト', cargandoPuntos: '読み込み中…', buscando: '検索中…',
+    relevancia: '関連度順', masNuevos: '新しい順', masViejos: '古い順', cambiarOrden: '並び順を変更',
+    todo: 'すべて', audiosChip: '曲', listasYMixes: '再生リストとミックス',
+    audio1: '1 曲', audiosN: '{n} 曲', resumen: '{a}・{l}', lm1: '再生リスト・ミックス 1 件', lmN: '再生リスト・ミックス {n} 件',
+    sinResultados: '見つかりませんでした。別の言葉で試してください。', noBuscar: '検索できませんでした。インターネット接続を確認してください。',
+    carpetaExt: '拡張機能フォルダ', cargandoAudios: '曲を読み込み中…', noAbrirLista: '開けませんでした。もう一度試すか、別のリストを選んでください。',
+    reproducirTodo: 'すべて再生', guardarEnMisListas: 'マイリストに保存', listaGuardada: '保存したリスト', cerrar: '閉じる',
+    nombreNuevaLista: '新しいリストの名前', crearLista: 'リストを作成', guardarCopia: 'コピーを保存', enviar: '送信', importar: '読み込む',
+    volverMisListas: '← マイリスト', enLaLista: 'リスト内 {n} 曲', listaVacia: 'リストは空です。検索して + で曲を追加しましょう。',
+    borrarLista: 'リストを削除', sinListas: 'まだリストがありません。上で作成するか、検索結果の + を使ってください。',
+    sonando: '再生中', renombrar: '名前を変更', letraAjustada: '歌詞調整済み', mix: 'ミックス', lista: '再生リスト', enVivo: 'ライブ', enVivoPunto: '● ライブ',
+    copiarEnlace: 'リンクをコピー', anadirTodosALista: 'すべての曲をリストに追加', anadirALista: 'リストに追加',
+    subir: '上へ', bajar: '下へ', quitarDeLista: 'リストから削除', confirmarBorrar: 'リスト「{nombre}」を削除しますか？',
+    anadirTodosA: 'すべての曲の追加先…', anadirA: '追加先…', nuevaListaEnter: '新しいリスト名を入力して Enter',
+    cargandoDos: '読み込み中: ', noCargar: '読み込めませんでした: ', motivo: '理由: ', listaDos: 'リスト: ', deTotal: '{i} / {n}',
+    versionNueva: 'Oído の新しいバージョンがあります（{v}）', descargar: 'ダウンロード', ahoraNo: '後で',
+    enlaceCopiado: 'リンクをコピーしました', noCopiarEnlace: 'リンクをコピーできませんでした', copiaGuardada: 'コピーを保存しました', noGuardarCopia: 'コピーを保存できませんでした',
+    noEnviar: '送信できませんでした', noAbrirArchivo: 'ファイルを開けませんでした', noRespaldo: 'このファイルは Oído のバックアップではありません',
+    lista1: '新しいリスト 1 件', listasN: '新しいリスト {n} 件', importado: '読み込み完了: {l}、{a}', nadaNuevo: '新しく読み込むものはありませんでした',
+    cerrarLetra: '歌詞を閉じる', letraCompleta: '歌詞を全画面表示', verLetraFija: '歌詞を見る（未同期）', mostrarLetra: '歌詞を表示',
+    sinLetra: 'この曲の歌詞はありません', buscandoLetra: '歌詞を探しています…',
+    fijaConTiempos: '歌詞が同期していません: ⟳ をタップし、今歌われている行までスクロールしてください', fijaSinTiempos: '歌詞が同期していません（このバージョンは長さが異なります）',
+    sincronizarLetra: '歌詞を同期', volverASincronizar: 'もう一度同期', deshacerAjuste: '調整を取り消す', cancelar: 'キャンセル',
+    pistaSync: '次の行が光るまでスクロールし、歌い始めた瞬間に <b>今！</b> をタップしてください', ahora: '今！',
+    marcaras: 'この行に合わせます: 「{t}」', letraSincronizada: '歌詞を同期しました', ajusteEliminado: '調整を取り消しました',
+    tituloFino: '微調整 · 調整中も曲は再生されます', letraTarde: '歌詞が遅れている', letraAdelantada: '歌詞が早すぎる',
+    adelantar1: '歌詞を 1 秒早める', adelantar025: '歌詞を 0.25 秒早める', atrasar025: '歌詞を 0.25 秒遅らせる', atrasar1: '歌詞を 1 秒遅らせる',
+    desdeCero: '⟳ 最初から同期し直す', f11Karaoke: 'F11 · カラオケ', karaokeCompleto: 'カラオケを全画面表示',
+    mensajeCompartir: 'Oído: 広告なしで、バックグラウンドでも歌詞付きで YouTube を聴けるアプリ。ここからダウンロード（Android ではインストールの許可を求められます）: {enlace}',
+    enlaceOidoCopiado: 'Oído のリンクをコピーしました', noCopiar: 'コピーできませんでした', karaokeFija: '歌詞が同期していません',
+  },
+};
+
+// Idioma elegido a mano, o el del teléfono/PC si está entre los disponibles (si no, inglés)
+let idiomaElegido = 'auto';
+try { idiomaElegido = localStorage.getItem('oido-idioma') || 'auto'; } catch {}
+function idiomaDelSistema() {
+  for (const l of (navigator.languages || [navigator.language || 'en'])) {
+    const c = String(l).slice(0, 2).toLowerCase();
+    if (TEXTOS[c]) return c;
+  }
+  return 'en';
+}
+let idioma = idiomaElegido === 'auto' || !TEXTOS[idiomaElegido] ? idiomaDelSistema() : idiomaElegido;
+
+// t('clave', { n: 3 }) → texto en el idioma actual (si falta, en español)
+function t(clave, vars) {
+  let s = (TEXTOS[idioma] && TEXTOS[idioma][clave]) ?? TEXTOS.es[clave] ?? clave;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+  return s;
+}
+const nAudios = n => n === 1 ? t('audio1') : t('audiosN', { n });
+
+// Traduce los textos fijos de la pantalla (atributos data-t*)
+function traducirPagina() {
+  document.documentElement.lang = idioma;
+  document.querySelectorAll('[data-t]').forEach(e => { e.textContent = t(e.dataset.t); });
+  document.querySelectorAll('[data-t-html]').forEach(e => { e.innerHTML = t(e.dataset.tHtml); });
+  document.querySelectorAll('[data-t-ph]').forEach(e => { e.placeholder = t(e.dataset.tPh); });
+  document.querySelectorAll('[data-t-aria]').forEach(e => { e.setAttribute('aria-label', t(e.dataset.tAria)); });
+  document.querySelectorAll('[data-t-title]').forEach(e => { e.title = t(e.dataset.tTitle); });
+}
+
 const ICONOS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
@@ -452,12 +708,12 @@ const listaEl = $('#lista'), estadoEl = $('#estado'), menu = $('#menu');
 
 let resultados = [];         // videos, mixes y listas de la búsqueda
 let filtro = 'todo';         // 'todo' | 'audios' | 'listas'
-let mensajeResultados = 'Busca algo para escuchar. Las listas y mixes de YouTube también aparecen.';
+let mensajeResultados = null; // null = mensaje de bienvenida (se traduce al mostrar)
 let abierta = null;          // {id, titulo, items, cargando, error} — lista o mix de YouTube abierto
 const cache = new Map();     // id de lista/mix -> {titulo, items}
 let listas = [];             // listas propias: [{id, nombre, items}]
 let orden = 'relevancia';    // 'relevancia' | 'nuevos' | 'viejos'
-const ORDENES = { relevancia: 'Relevancia', nuevos: 'Más nuevos', viejos: 'Más viejos' };
+const ORDENES = { relevancia: 'relevancia', nuevos: 'masNuevos', viejos: 'masViejos' }; // claves del diccionario
 let vista = 'resultados';    // 'resultados' | 'abierta' | 'mislistas' | id de lista propia
 let cola = null;             // {fuente, items, i}
 
@@ -477,7 +733,7 @@ function ordenar(items) {
   return [...con, ...sin];
 }
 
-const relativo = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
+let relativo = new Intl.RelativeTimeFormat(idioma, { numeric: 'auto' }); // "hace 2 días" en el idioma actual
 function haceCuanto(seg) {
   const d = (seg * 1000 - Date.now()) / 1000;
   const pasos = [[60, 'second'], [60, 'minute'], [24, 'hour'], [30, 'day'], [12, 'month'], [Infinity, 'year']];
@@ -523,9 +779,9 @@ function pintarPestanas() {
     b.onclick = () => { vista = id; pintar(); };
     nav.appendChild(b);
   };
-  tab('resultados', 'Resultados');
-  if (abierta) tab('abierta', abierta.titulo || 'Cargando…', abierta.cargando ? null : abierta.items.length);
-  tab('mislistas', 'Mis listas', listas.length, vista === 'mislistas' || !!listaPorId(vista));
+  tab('resultados', t('resultados'));
+  if (abierta) tab('abierta', abierta.titulo || t('cargandoPuntos'), abierta.cargando ? null : abierta.items.length);
+  tab('mislistas', t('misListas'), listas.length, vista === 'mislistas' || !!listaPorId(vista));
 }
 
 function crearLista(nombre, items = []) {
@@ -548,42 +804,44 @@ function texto(t) { const s = document.createElement('span'); s.textContent = t;
 function pintarEstado() {
   estadoEl.innerHTML = '';
   if (vista === 'resultados') {
-    estadoEl.appendChild(texto(mensajeResultados));
-    if (!resultados.length && window.oido.abrirExtensiones) estadoEl.appendChild(enlace('Carpeta de extensiones', () => window.oido.abrirExtensiones()));
+    estadoEl.appendChild(texto(mensajeResultados ?? t('buscaAlgo')));
+    if (!resultados.length && window.oido.abrirExtensiones) estadoEl.appendChild(enlace(t('carpetaExt'), () => window.oido.abrirExtensiones()));
   } else if (vista === 'abierta') {
-    if (abierta.cargando) estadoEl.appendChild(texto('Cargando audios…'));
-    else if (abierta.error) estadoEl.appendChild(texto('No se pudo abrir. Prueba otra vez o elige otra lista.'));
+    if (abierta.cargando) estadoEl.appendChild(texto(t('cargandoAudios')));
+    else if (abierta.error) estadoEl.appendChild(texto(t('noAbrirLista')));
     else {
-      estadoEl.appendChild(texto(abierta.items.length === 1 ? '1 audio' : abierta.items.length + ' audios'));
+      estadoEl.appendChild(texto(nAudios(abierta.items.length)));
       if (abierta.items.length) {
-        estadoEl.appendChild(enlace('Reproducir todo', () => tocar('abierta', itemsDeVista()[0])));
-        estadoEl.appendChild(enlace('Guardar en mis listas', () => {
-          const l = crearLista(abierta.titulo || 'Lista guardada', abierta.items);
+        estadoEl.appendChild(enlace(t('reproducirTodo'), () => tocar('abierta', itemsDeVista()[0])));
+        estadoEl.appendChild(enlace(t('guardarEnMisListas'), () => {
+          const l = crearLista(abierta.titulo || t('listaGuardada'), abierta.items);
           if (l) { vista = l.id; pintar(); }
         }));
       }
     }
-    estadoEl.appendChild(enlace('Cerrar', () => { abierta = null; vista = 'resultados'; pintar(); }));
+    estadoEl.appendChild(enlace(t('cerrar'), () => { abierta = null; vista = 'resultados'; pintar(); }));
   } else if (vista === 'mislistas') {
     const f = document.createElement('form');
     f.className = 'nueva';
-    f.innerHTML = '<input placeholder="Nombre de la nueva lista" maxlength="40"><button class="primario">Crear lista</button>';
+    f.innerHTML = '<input maxlength="40"><button class="primario"></button>';
+    f.querySelector('input').placeholder = t('nombreNuevaLista');
+    f.querySelector('button').textContent = t('crearLista');
     f.onsubmit = e => { e.preventDefault(); if (crearLista(f.querySelector('input').value)) pintar(); };
     estadoEl.appendChild(f);
     const r = document.createElement('div');
     r.className = 'respaldo';
     if (listas.length) {
-      r.appendChild(enlace('Guardar copia', guardarCopia));
-      if (window.oido.compartirArchivo) r.appendChild(enlace('Enviar', enviarCopia));
+      r.appendChild(enlace(t('guardarCopia'), guardarCopia));
+      if (window.oido.compartirArchivo) r.appendChild(enlace(t('enviar'), enviarCopia));
     }
-    r.appendChild(enlace('Importar', importarDesdeArchivo));
+    r.appendChild(enlace(t('importar'), importarDesdeArchivo));
     estadoEl.appendChild(r);
   } else {
     const l = listaPorId(vista);
-    estadoEl.appendChild(enlace('← Mis listas', () => { vista = 'mislistas'; pintar(); }));
-    estadoEl.appendChild(texto(l.items.length ? l.items.length + ' en la lista' : 'Lista vacía. Busca algo y usa + para añadir audios aquí.'));
-    if (l.items.length) estadoEl.appendChild(enlace('Reproducir todo', () => tocar(vista, l.items[0])));
-    estadoEl.appendChild(enlace('Borrar lista', () => borrarLista(l.id)));
+    estadoEl.appendChild(enlace(t('volverMisListas'), () => { vista = 'mislistas'; pintar(); }));
+    estadoEl.appendChild(texto(l.items.length ? t('enLaLista', { n: l.items.length }) : t('listaVacia')));
+    if (l.items.length) estadoEl.appendChild(enlace(t('reproducirTodo'), () => tocar(vista, l.items[0])));
+    estadoEl.appendChild(enlace(t('borrarLista'), () => borrarLista(l.id)));
   }
 
   // Filtros de resultados
@@ -596,11 +854,11 @@ function pintarEstado() {
     const bo = document.createElement('button');
     bo.className = 'orden';
     bo.innerHTML = icono('orden', 16) + '<span></span>';
-    bo.querySelector('span').textContent = ORDENES[orden];
-    bo.title = 'Cambiar orden';
+    bo.querySelector('span').textContent = t(ORDENES[orden]);
+    bo.title = t('cambiarOrden');
     bo.onclick = () => { orden = orden === 'relevancia' ? 'nuevos' : orden === 'nuevos' ? 'viejos' : 'relevancia'; pintar(); };
     if (vista === 'resultados') {
-      [['todo', 'Todo'], ['audios', 'Audios'], ['listas', 'Listas y mixes']].forEach(([id, nombre]) => {
+      [['todo', t('todo')], ['audios', t('audiosChip')], ['listas', t('listasYMixes')]].forEach(([id, nombre]) => {
         const b = document.createElement('button');
         b.textContent = nombre;
         b.setAttribute('aria-pressed', filtro === id);
@@ -618,7 +876,7 @@ function pintarMisListas() {
   if (!listas.length) {
     const p = document.createElement('p');
     p.className = 'vacio';
-    p.textContent = 'Aún no tienes listas. Crea una aquí arriba o usa + en cualquier resultado.';
+    p.textContent = t('sinListas');
     listaEl.appendChild(p);
     return;
   }
@@ -627,8 +885,8 @@ function pintarMisListas() {
     li.tabIndex = 0;
     li.innerHTML = '<span class="titulo"></span><span class="canal"></span><span class="dur"></span><span class="acciones"></span>';
     li.querySelector('.titulo').textContent = l.nombre;
-    li.querySelector('.canal').textContent = l.items.length === 1 ? '1 audio' : l.items.length + ' audios';
-    if (cola && cola.fuente === l.id) { li.classList.add('sonando'); li.querySelector('.dur').textContent = 'Sonando'; }
+    li.querySelector('.canal').textContent = nAudios(l.items.length);
+    if (cola && cola.fuente === l.id) { li.classList.add('sonando'); li.querySelector('.dur').textContent = t('sonando'); }
     const acc = li.querySelector('.acciones');
     const accion = (txt, titulo, fn) => {
       const b = document.createElement('button');
@@ -636,9 +894,9 @@ function pintarMisListas() {
       b.onclick = e => { e.stopPropagation(); fn(); };
       acc.appendChild(b);
     };
-    if (l.items.length) accion('play', 'Reproducir', () => tocar(l.id, l.items[0]));
-    accion('edit', 'Renombrar', () => renombrar(li, l));
-    accion('x', 'Borrar lista', () => borrarLista(l.id));
+    if (l.items.length) accion('play', t('reproducir'), () => tocar(l.id, l.items[0]));
+    accion('edit', t('renombrar'), () => renombrar(li, l));
+    accion('x', t('borrarLista'), () => borrarLista(l.id));
     const abrirL = () => { vista = l.id; pintar(); };
     li.onclick = abrirL;
     li.onkeydown = e => { if (e.key === 'Enter') abrirL(); };
@@ -680,18 +938,18 @@ function pintar() {
     if (!esColeccion(it) && ajustes[it.id] != null) {
       const m = document.createElement('span');
       m.className = 'ajustada';
-      m.textContent = ' · letra ajustada';
+      m.textContent = ' · ' + t('letraAjustada');
       li.querySelector('.canal').appendChild(m);
     }
     if (esColeccion(it)) {
       li.classList.add('coleccion');
-      const t = document.createElement('span');
-      t.className = 'tipo'; t.textContent = it.tipo === 'mix' ? 'Mix' : 'Lista';
-      li.querySelector('.dur').appendChild(t);
+      const etq = document.createElement('span');
+      etq.className = 'tipo'; etq.textContent = it.tipo === 'mix' ? t('mix') : t('lista');
+      li.querySelector('.dur').appendChild(etq);
     } else if (it.vivo) {
-      const t = document.createElement('span');
-      t.className = 'tipo vivo'; t.textContent = 'EN VIVO';
-      li.querySelector('.dur').appendChild(t);
+      const etq = document.createElement('span');
+      etq.className = 'tipo vivo'; etq.textContent = t('enVivo');
+      li.querySelector('.dur').appendChild(etq);
     } else {
       li.querySelector('.dur').textContent = it.duracion || '';
     }
@@ -704,12 +962,12 @@ function pintar() {
       b.onclick = e => { e.stopPropagation(); fn(b); };
       acc.appendChild(b);
     };
-    accion('enlace', 'Copiar enlace', () => copiarEnlace(it));
-    accion('plus', esColeccion(it) ? 'Añadir todos sus audios a una lista' : 'Añadir a una lista', b => abrirMenu(b, it));
+    accion('enlace', t('copiarEnlace'), () => copiarEnlace(it));
+    accion('plus', esColeccion(it) ? t('anadirTodosALista') : t('anadirALista'), b => abrirMenu(b, it));
     if (propia) {
-      if (i > 0) accion('up', 'Subir', () => mover(i, i - 1));
-      if (i < items.length - 1) accion('down', 'Bajar', () => mover(i, i + 1));
-      accion('x', 'Quitar de la lista', () => quitar(i));
+      if (i > 0) accion('up', t('subir'), () => mover(i, i - 1));
+      if (i < items.length - 1) accion('down', t('bajar'), () => mover(i, i + 1));
+      accion('x', t('quitarDeLista'), () => quitar(i));
     }
 
     const activar = () => esColeccion(it) ? abrir(it) : tocar(vista, it);
@@ -761,7 +1019,7 @@ function quitar(i) {
 
 function borrarLista(id) {
   const l = listaPorId(id);
-  if (!confirm(`¿Borrar la lista "${l.nombre}"?`)) return;
+  if (!confirm(t('confirmarBorrar', { nombre: l.nombre }))) return;
   listas = listas.filter(x => x.id !== id);
   if (cola && cola.fuente === id) cola.fuente = 'borrada';
   vista = 'mislistas';
@@ -780,7 +1038,7 @@ async function anadir(lista, item) {
 function abrirMenu(boton, item) {
   menu.innerHTML = '';
   const p = document.createElement('p');
-  p.textContent = esColeccion(item) ? 'Añadir todos sus audios a…' : 'Añadir a…';
+  p.textContent = esColeccion(item) ? t('anadirTodosA') : t('anadirA');
   menu.appendChild(p);
   listas.forEach(l => {
     const b = document.createElement('button');
@@ -790,7 +1048,8 @@ function abrirMenu(boton, item) {
     menu.appendChild(b);
   });
   const f = document.createElement('form');
-  f.innerHTML = '<input placeholder="Nueva lista y Enter" maxlength="40">';
+  f.innerHTML = '<input maxlength="40">';
+  f.querySelector('input').placeholder = t('nuevaListaEnter');
   const inp = f.querySelector('input');
   if (esColeccion(item)) inp.value = item.titulo.slice(0, 40);
   f.onsubmit = e => {
@@ -819,16 +1078,16 @@ $('#f').onsubmit = async e => {
   $('#q').blur();
   vista = 'resultados';
   resultados = [];
-  mensajeResultados = 'Buscando…';
+  mensajeResultados = t('buscando');
   pintar();
   try {
     resultados = await window.oido.buscar(q);
     const n = resultados.filter(esColeccion).length;
     mensajeResultados = resultados.length
-      ? `${resultados.length - n} audios y ${n} listas o mixes`
-      : 'Sin resultados. Prueba otras palabras.';
+      ? t('resumen', { a: nAudios(resultados.length - n), l: n === 1 ? t('lm1') : t('lmN', { n }) })
+      : t('sinResultados');
   } catch {
-    mensajeResultados = 'No se pudo buscar. Revisa tu conexión a internet.';
+    mensajeResultados = t('noBuscar');
   }
   pintar();
 };
@@ -852,14 +1111,14 @@ function tocar(fuente, item) {
   cola = { fuente, items, i: Math.max(0, items.indexOf(item)), titulo };
   reproductor.reproducir(JSON.stringify(items.map(soloVideo)), cola.i, String(fuente), titulo || '');
   $('#reproductor').classList.add('activo');
-  $('#ahora').textContent = 'Cargando: ' + item.titulo;
+  $('#ahora').textContent = t('cargandoDos') + item.titulo;
   pintar();
 }
 
 function nombreOrigen() {
   if (!cola) return '';
   const l = listaPorId(cola.fuente);
-  return l ? 'Lista: ' + l.nombre : cola.titulo ? cola.titulo : 'Resultados';
+  return l ? t('listaDos') + l.nombre : cola.titulo ? cola.titulo : t('resultados');
 }
 
 let arrastrando = false;
@@ -873,16 +1132,16 @@ window.__estado = s => {
   if (!s.hay) { r.classList.remove('activo'); return; }
   r.classList.add('activo');
   if (cola && cola.i !== s.index) { cola.i = s.index; pintar(); }
-  $('#ahora').textContent = (s.error ? 'No se pudo cargar: ' : s.cargando ? 'Cargando: ' : '') + s.titulo;
+  $('#ahora').textContent = (s.error ? t('noCargar') : s.cargando ? t('cargandoDos') : '') + s.titulo;
   const origen = nombreOrigen();
   $('#origen').textContent = s.error && s.detalle
-    ? 'Motivo: ' + s.detalle
-    : (origen ? origen + ' · ' : '') + `${Math.max(1, s.index + 1)} de ${s.total}`;
+    ? t('motivo') + s.detalle
+    : (origen ? origen + ' · ' : '') + t('deTotal', { i: Math.max(1, s.index + 1), n: s.total });
   $('#origen').title = s.detalle || '';
   $('#play').innerHTML = icono(s.quiere ? 'pause' : 'play', 26);
-  $('#play').setAttribute('aria-label', s.quiere ? 'Pausar' : 'Reproducir');
+  $('#play').setAttribute('aria-label', s.quiere ? t('pausar') : t('reproducir'));
   document.querySelector('.tiempo').classList.toggle('en-vivo', !!s.vivo);
-  if (s.vivo) $('#t-pos').textContent = '● EN VIVO';
+  if (s.vivo) $('#t-pos').textContent = t('enVivoPunto');
   else if (!arrastrando) {
     barra.max = s.dur || 0;
     barra.value = s.pos;
@@ -919,7 +1178,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenu()
 // ---------- Aviso de versión nueva (Android) ----------
 window.__actualizacion = ({ version, url }) => {
   const a = $('#actualizacion');
-  a.querySelector('span').textContent = 'Hay una versión nueva de Oído (' + version + ')';
+  a.querySelector('span').textContent = t('versionNueva', { v: version });
   a.querySelector('.descargar').onclick = () => { window.oido.abrirEnlace(url); a.hidden = true; };
   a.querySelector('.cerrar').onclick = () => { a.hidden = true; };
   a.hidden = false;
@@ -946,9 +1205,9 @@ async function copiarEnlace(it) {
   try {
     if (window.oido.copiar) await window.oido.copiar(url);
     else await navigator.clipboard.writeText(url);
-    avisar('Enlace copiado');
+    avisar(t('enlaceCopiado'));
   } catch {
-    avisar('No se pudo copiar el enlace');
+    avisar(t('noCopiarEnlace'));
   }
 }
 
@@ -963,32 +1222,32 @@ const textoRespaldo = () => JSON.stringify({
 async function guardarCopia() {
   try {
     const ok = await window.oido.guardarArchivo(textoRespaldo(), nombreRespaldo());
-    if (ok) avisar('Copia guardada');
-  } catch { avisar('No se pudo guardar la copia'); }
+    if (ok) avisar(t('copiaGuardada'));
+  } catch { avisar(t('noGuardarCopia')); }
 }
 function enviarCopia() {
   try { window.oido.compartirArchivo(textoRespaldo(), nombreRespaldo()); }
-  catch { avisar('No se pudo enviar'); }
+  catch { avisar(t('noEnviar')); }
 }
 async function importarDesdeArchivo() {
   try {
     const texto = await window.oido.abrirArchivo();
     if (texto != null) importarListas(texto);
-  } catch { avisar('No se pudo abrir el archivo'); }
+  } catch { avisar(t('noAbrirArchivo')); }
 }
 
 // Combina: agrega listas nuevas y, si ya existe una con el mismo nombre, suma los audios que falten.
 function importarListas(texto) {
   let datos;
-  try { datos = JSON.parse(texto); } catch { return avisar('Ese archivo no es un respaldo de Oído'); }
+  try { datos = JSON.parse(texto); } catch { return avisar(t('noRespaldo')); }
   const entrantes = Array.isArray(datos) ? datos : datos && datos.listas;
-  if (!Array.isArray(entrantes)) return avisar('Ese archivo no es un respaldo de Oído');
+  if (!Array.isArray(entrantes)) return avisar(t('noRespaldo'));
   let nuevas = 0, audios = 0;
   for (const e of entrantes) {
     if (!e || typeof e.nombre !== 'string' || !Array.isArray(e.items)) continue;
     const items = e.items.filter(x => x && typeof x.id === 'string' && x.id).map(soloVideo);
     let l = listas.find(x => x.nombre.trim().toLowerCase() === e.nombre.trim().toLowerCase());
-    if (!l) { l = { id: uid(), nombre: e.nombre.trim().slice(0, 40) || 'Lista', items: [] }; listas.push(l); nuevas++; }
+    if (!l) { l = { id: uid(), nombre: e.nombre.trim().slice(0, 40) || t('lista'), items: [] }; listas.push(l); nuevas++; }
     for (const it of items) if (!l.items.some(x => x.id === it.id)) {
       l.items.push(it); audios++;
       if (cola && cola.items === l.items) reproductor.agregar(JSON.stringify([it]));
@@ -1005,8 +1264,8 @@ function importarListas(texto) {
   vista = 'mislistas';
   pintar();
   avisar(nuevas || audios
-    ? `Importado: ${nuevas} ${nuevas === 1 ? 'lista nueva' : 'listas nuevas'}, ${audios} ${audios === 1 ? 'audio' : 'audios'}`
-    : 'No había nada nuevo que importar');
+    ? t('importado', { l: nuevas === 1 ? t('lista1') : t('listasN', { n: nuevas }), a: nAudios(audios) })
+    : t('nadaNuevo'));
 }
 window.__importar = importarListas; // Android: "Abrir con Oído" desde WhatsApp o el correo
 
@@ -1145,8 +1404,8 @@ function pintarLetra() {
   b.hidden = !(conLetra || pantallaLetra);
   b.classList.toggle('activo', mini);
   b.classList.toggle('lleno', pantallaLetra);
-  b.title = pantallaLetra ? 'Cerrar letra' : mini ? 'Letra en pantalla completa'
-    : est === 'fija' ? 'Ver letra (sin sincronizar)' : 'Mostrar letra';
+  b.title = pantallaLetra ? t('cerrarLetra') : mini ? t('letraCompleta')
+    : est === 'fija' ? t('verLetraFija') : t('mostrarLetra');
   $('#franja').hidden = !mini;
   document.body.classList.toggle('letra-abierta', pantallaLetra);
   $('#pantalla-letra').hidden = !pantallaLetra;
@@ -1167,7 +1426,7 @@ function pintarAccionesLetra() {
   const conTiempos = !!(letra && letra.lineas && letra.lineas.length);
   $('#btn-sync').hidden = !conTiempos || sincronizando || ajustandoFino;
   $('#btn-sync').classList.toggle('ajustado', !!(letra && letra.ajustada));
-  $('#btn-sync').title = letra && letra.ajustada ? 'Volver a sincronizar' : 'Sincronizar letra';
+  $('#btn-sync').title = letra && letra.ajustada ? t('volverASincronizar') : t('sincronizarLetra');
   $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando || ajustandoFino;
   $('#panel-fino').hidden = !ajustandoFino;
   if (ajustandoFino) pintarValorFino();
@@ -1185,14 +1444,14 @@ function pintarPantallaLetra() {
   cuerpo.classList.toggle('sincronizando', sincronizando);
   if (sincronizando && letra && letra.lineas) return pintarModoSync(cuerpo);
   cuerpo.classList.toggle('fija', !!letra && letra.estado === 'fija');
-  if (!letra || letra.estado === 'sin') { cuerpo.innerHTML = '<p class="aviso-letra">Sin letra para esta canción</p>'; return; }
-  if (letra.estado === 'cargando') { cuerpo.innerHTML = '<p class="aviso-letra">Buscando letra…</p>'; return; }
+  if (!letra || letra.estado === 'sin') { cuerpo.innerHTML = '<p class="aviso-letra"></p>'; cuerpo.firstChild.textContent = t('sinLetra'); return; }
+  if (letra.estado === 'cargando') { cuerpo.innerHTML = '<p class="aviso-letra"></p>'; cuerpo.firstChild.textContent = t('buscandoLetra'); return; }
   if (letra.estado === 'fija') {
     const nota = document.createElement('p');
     nota.className = 'aviso-letra';
     nota.textContent = letra.lineas
-      ? 'Letra sin sincronizar: toca ⟳ y desliza hasta la línea que suena'
-      : 'Letra sin sincronizar (esta versión dura distinto)';
+      ? t('fijaConTiempos')
+      : t('fijaSinTiempos');
     const p = document.createElement('p');
     p.className = 'texto-fijo';
     p.textContent = letra.texto;
@@ -1282,7 +1541,7 @@ function resaltarElegida() {
   const p = cuerpo.querySelector(`p[data-i="${i}"]`);
   if (p) p.classList.add('elegida');
   const l = lineasBase()[i];
-  $('#elegida').textContent = l ? `Marcarás: “${l.texto}”` : '';
+  $('#elegida').textContent = l ? t('marcaras', { t: l.texto }) : '';
 }
 $('#letra-cuerpo').addEventListener('scroll', () => {
   if (!sincronizando || resaltadoPendiente) return;
@@ -1316,7 +1575,7 @@ function marcarAhora() {
   lineaActual = -1;
   pintarLetra();
   pintar();
-  avisar('Letra sincronizada');
+  avisar(t('letraSincronizada'));
 }
 
 $('#btn-sync').innerHTML = icono('sync', 20);
@@ -1333,7 +1592,7 @@ $('#btn-deshacer').onclick = () => {
   lineaActual = -1;
   pintarLetra();
   pintar();
-  avisar('Ajuste eliminado');
+  avisar(t('ajusteEliminado'));
 };
 $('#btn-cancelar-sync').onclick = () => { sincronizando = false; pintarLetra(); };
 $('#btn-ahora').onclick = marcarAhora;
@@ -1363,6 +1622,7 @@ function datosKaraoke() {
     canal: it ? it.canal : '',
     letra: l ? { estado: l.estado, lineas: l.lineas, texto: l.texto } : null,
     tema: colores(tonoActual),
+    textos: { fija: t('karaokeFija') },
   };
 }
 // El karaoke (en la tele o encima de la app) lo muestra Android con su propia pantalla
@@ -1444,12 +1704,13 @@ function prepararTema() {
   $('#btn-tema').onclick = () => panel.classList.toggle('abierto');
   barra.addEventListener('input', () => { activarDinamico(false); aplicarTema(barra.value); });
   const puntos = $('#puntos');
-  TONOS.forEach(t => {
+  TONOS.forEach(tn => {
     const b = document.createElement('button');
     b.className = 'punto';
-    b.style.background = `hsl(${t} 75% 60%)`;
-    b.setAttribute('aria-label', 'Tono ' + t);
-    b.onclick = () => { activarDinamico(false); barra.value = t; aplicarTema(t); };
+    b.style.background = `hsl(${tn} 75% 60%)`;
+    b.dataset.tono = tn;
+    b.setAttribute('aria-label', t('tono', { n: tn }));
+    b.onclick = () => { activarDinamico(false); barra.value = tn; aplicarTema(tn); };
     puntos.appendChild(b);
   });
   $('#tema-listo').onclick = () => panel.classList.remove('abierto');
@@ -1471,19 +1732,45 @@ function prepararTema() {
   try { if (localStorage.getItem('oido-dinamico') === '1') activarDinamico(true); } catch {}
 
   // Compartir Oído: el enlace a la última versión
-  $('#btn-compartir-app').innerHTML = icono('compartirOido', 18) + '<span>Compartir Oído</span>';
+  $('#btn-compartir-app').innerHTML = icono('compartirOido', 18) + '<span data-t="compartirOido"></span>';
   $('#btn-compartir-oido').innerHTML = icono('compartirOido', 24);
   $('#btn-compartir-app').onclick = $('#btn-compartir-oido').onclick = async () => {
     const enlace = 'https://github.com/KALAVER084/oido/releases/latest';
-    const texto = 'Oído: escucha YouTube sin anuncios, en segundo plano y con letras. ' +
-      'Descárgalo aquí (Android pedirá permiso para instalarlo): ' + enlace;
+    const texto = t('mensajeCompartir', { enlace });
     if (window.oido.compartirTexto) return window.oido.compartirTexto(texto);
-    try { await (window.oido.copiar ? window.oido.copiar(texto) : navigator.clipboard.writeText(texto)); avisar('Enlace de Oído copiado'); }
-    catch { avisar('No se pudo copiar'); }
+    try { await (window.oido.copiar ? window.oido.copiar(texto) : navigator.clipboard.writeText(texto)); avisar(t('enlaceOidoCopiado')); }
+    catch { avisar(t('noCopiar')); }
   };
 }
 prepararTema();
 $('#btn-buscar').innerHTML = icono('buscar', 22);
+
+// ---------- Selector de idioma ----------
+function prepararIdioma() {
+  const sel = $('#idioma');
+  const opciones = [['auto', t('automatico') + ' · ' + IDIOMAS[idiomaDelSistema()]], ...Object.entries(IDIOMAS)];
+  sel.innerHTML = '';
+  for (const [codigo, nombre] of opciones) {
+    const o = document.createElement('option');
+    o.value = codigo; o.textContent = nombre;
+    sel.appendChild(o);
+  }
+  sel.value = idiomaElegido;
+}
+$('#idioma').onchange = e => {
+  idiomaElegido = e.target.value;
+  try { localStorage.setItem('oido-idioma', idiomaElegido); } catch {}
+  idioma = idiomaElegido === 'auto' ? idiomaDelSistema() : idiomaElegido;
+  relativo = new Intl.RelativeTimeFormat(idioma, { numeric: 'auto' });
+  traducirPagina();
+  prepararIdioma();
+  document.querySelectorAll('.punto').forEach(b => b.setAttribute('aria-label', t('tono', { n: b.dataset.tono })));
+  pintar();
+  pintarLetra();
+  karaokeCancion();
+};
+prepararIdioma();
+traducirPagina();
 $('#ant').innerHTML = icono('prev', 22);
 $('#sig').innerHTML = icono('next', 22);
 $('#play').innerHTML = icono('play', 26);

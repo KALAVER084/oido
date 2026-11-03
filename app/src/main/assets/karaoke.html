@@ -21,7 +21,7 @@
   html, body { height: 100%; margin: 0; }
   body {
     background: var(--fondo); color: var(--texto); overflow: hidden;
-    font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
   }
   #fondo { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
   #k { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
@@ -110,6 +110,7 @@ function pintar() {
   const c = cancion || {};
   aplicarColores(c.tema);
   $('#tit').textContent = c.titulo || '';
+  $('#fija-nota').textContent = (c.textos && c.textos.fija) || 'Letra sin sincronizar';
   $('#art').textContent = c.canal || '';
   $('#solo-tit').textContent = c.titulo || 'Oído';
   $('#solo-art').textContent = c.canal || '';
