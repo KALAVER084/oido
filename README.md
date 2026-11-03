@@ -14,6 +14,24 @@
 
 ---
 
+## Capturas
+
+<p align="center">
+  <img src="capturas/resultados.png" width="230" alt="Resultados de búsqueda y reproductor">
+  &nbsp;
+  <img src="capturas/letra.png" width="230" alt="Letra sincronizada a pantalla completa">
+  &nbsp;
+  <img src="capturas/tema.png" width="230" alt="Panel de tema con colores y modo dinámico">
+</p>
+
+<p align="center">
+  <img src="capturas/karaoke.png" width="720" alt="Modo karaoke con la letra en grande y fondo animado">
+</p>
+
+<p align="center"><sub>Búsqueda y reproductor · Letra sincronizada · Tema de colores · Modo karaoke</sub></p>
+
+---
+
 ## Qué hace
 
 Oído hace una sola cosa: **buscar en YouTube y reproducir solo el audio**.
@@ -26,7 +44,8 @@ Oído hace una sola cosa: **buscar en YouTube y reproducir solo el audio**.
 - **Modo karaoke:** con una tele conectada (cable, dock o Miracast) la letra aparece en grande en la tele mientras usas el teléfono normal. Con cualquier otra forma de duplicar pantalla, abre la letra a pantalla completa y gira el teléfono.
 - **En vivo:** transmisiones como Lofi Girl, en la calidad más baja para gastar pocos datos.
 - **Compartir:** copia el enlace de cualquier audio, mix o lista.
-- **Tema a tu gusto:** eliges un color y la app ajusta fondo, texto y acentos.
+- **Tema a tu gusto:** eliges un color y la app ajusta fondo, texto y acentos, o activas el modo **Dinámico** para que los colores cambien solos, despacio.
+- **Sincroniza tú la letra:** si una letra va desfasada (en vivos o videoclips), la ajustas con un toque y con ajuste fino; la app lo recuerda para ese audio.
 - **Se actualiza sola:** te avisa dentro de la app cuando hay versión nueva.
 
 ## Instalación

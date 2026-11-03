@@ -8,6 +8,7 @@ on:
       - "MANTENIMIENTO.md"
       - "logo.png"
       - "LICENSE"
+      - "capturas/**"
   workflow_dispatch:
 
 permissions:
