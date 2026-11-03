@@ -122,10 +122,8 @@
     position: absolute; right: 0; top: 50%; transform: translateY(-50%);
     width: 2.8rem; height: 2.8rem; color: var(--suave);
   }
-  .controles #btn-letra:hover { color: var(--acento); }
   /* Compartir Oído: a la izquierda, en espejo del botón de letra */
   .controles #btn-compartir-oido { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--suave); }
-  .controles #btn-compartir-oido:hover { color: var(--acento); }
   .controles #btn-letra.activo { color: var(--acento); }
   .controles #btn-letra.lleno { color: var(--acento); background: var(--tinte); }
   #franja {
@@ -185,7 +183,11 @@
   #progreso { flex: 1; accent-color: var(--acento); border: 0; padding: 0; }
   .controles { display: flex; justify-content: center; align-items: center; gap: 1.6rem; margin-top: .3rem; }
   .controles button { width: 2.8rem; height: 2.8rem; display: grid; place-items: center; border-radius: 50%; color: var(--texto); }
-  .controles button:hover { color: var(--acento); }
+  @media (hover: hover) {
+    .controles button:hover { color: var(--acento); }
+    .controles #btn-letra:hover { color: var(--acento); }
+    .controles #btn-compartir-oido:hover { color: var(--acento); }
+  }
   #play { width: 3.3rem; height: 3.3rem; background: var(--acento); color: var(--fondo); }
   #play:hover { color: var(--fondo); filter: brightness(1.08); }
 </style>
@@ -437,7 +439,7 @@ const ICONOS = {
   orden: '<path d="M4 6h9M4 12h7M4 18h5M17 5v14M14 16l3 3 3-3"/>',
   letra: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none"/>',
   buscar: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
-  compartirOido: '<circle cx="4.5" cy="12" r="2"/><circle cx="11" cy="5.5" r="2"/><circle cx="11" cy="18.5" r="2"/><path d="M6.3 11l3-3.9M6.3 13l3 3.9"/><circle cx="15.6" cy="12" r="1.1" fill="currentColor"/><path d="M18 9.5a3.5 3.5 0 0 1 0 5M20.5 7a7 7 0 0 1 0 10"/>',
+  compartirOido: '<circle cx="14" cy="6" r="2.3"/><circle cx="4.5" cy="12" r="2.3"/><circle cx="14" cy="18" r="2.3"/><path d="M6.6 10.7l5.3-3.4M6.6 13.3l5.3 3.4"/><path stroke-width="1.9" d="M18.29 2.4A5.6 5.6 0 0 1 18.29 9.6"/>',
   compartir: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>',
   deshacer: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
