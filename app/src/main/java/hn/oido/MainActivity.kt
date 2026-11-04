@@ -482,8 +482,8 @@ class MainActivity : ComponentActivity() {
                         this@MainActivity,
                         alListo = { js("window.__karaokeListo && window.__karaokeListo()") },
                         alSalir = { js("window.__salirKaraoke && window.__salirKaraoke()") },
-                        // Solo se aceptan las órdenes conocidas (ocultar o mostrar la letra)
-                        alComando = { c -> if (c == "ocultar-letra" || c == "mostrar-letra") js("window.__karaokeComando && window.__karaokeComando('$c')") },
+                        // Solo se aceptan las órdenes conocidas: letra, pausa, siguiente, anterior e "ir:<ms>"
+                        alComando = { c -> if (c in ORDENES_KARAOKE || ORDEN_IR.matches(c)) js("window.__karaokeComando && window.__karaokeComando('$c')") },
                     )
                     marco.addView(v.web, FrameLayout.LayoutParams(-1, -1))
                     karaokeLocal = v
@@ -564,3 +564,7 @@ object Cola {
     @Volatile var fuente: String? = null
     @Volatile var titulo: String? = null
 }
+
+/** Órdenes que puede mandar la pantalla del karaoke (cualquier otra se ignora). */
+private val ORDENES_KARAOKE = setOf("ocultar-letra", "mostrar-letra", "alternar", "siguiente", "anterior")
+private val ORDEN_IR = Regex("ir:\\d{1,9}")

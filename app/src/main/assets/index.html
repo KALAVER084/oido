@@ -1348,7 +1348,14 @@ function mostrarLetraOculta() {
   pintarLetra();
 }
 // Órdenes que llegan desde la pantalla del karaoke (botón junto a la ×)
-window.__karaokeComando = c => { if (c === 'ocultar-letra') ocultarLetra(); else if (c === 'mostrar-letra') mostrarLetraOculta(); };
+window.__karaokeComando = c => {
+  if (c === 'ocultar-letra') ocultarLetra();
+  else if (c === 'mostrar-letra') mostrarLetraOculta();
+  else if (c === 'alternar') reproductor.alternar();
+  else if (c === 'siguiente') reproductor.siguiente();
+  else if (c === 'anterior') reproductor.anterior();
+  else if (/^ir:\d{1,9}$/.test(c)) reproductor.irA(+c.slice(3));      // saltar a ese punto (ms)
+};
 
 // Aplica el ajuste guardado (si lo hay) a la letra tal como vino de LRCLIB
 function conAjuste(id, r) {
@@ -1454,7 +1461,7 @@ function actualizarLetra(s) {
     pintarLetra();
   }
   if (letra && letra.estado === 'sinc') moverLetra(s.pos);
-  if (hayKaraoke()) enviarKaraoke({ tipo: 'pos', pos: s.pos, dur: s.dur });
+  if (hayKaraoke()) enviarKaraoke({ tipo: 'pos', pos: s.pos, dur: s.dur, sonando: !!s.quiere });
 }
 
 function pintarLetra() {

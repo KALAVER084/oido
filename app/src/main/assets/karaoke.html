@@ -37,6 +37,25 @@
   #letra-k { position: fixed; top: 3vmin; right: 14vmin; z-index: 5; height: 9vmin; min-height: 44px; padding: 0 3vmin;
     border-radius: 99px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 2.6vmin; cursor: pointer; transition: opacity .3s; }
   #letra-k.oculto { opacity: 0; pointer-events: none; }
+  /* Controles de la canción */
+  #ctrl { position: fixed; inset: 0; z-index: 4; pointer-events: none; transition: opacity .3s;
+    background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,.35)); }
+  #ctrl.oculto { opacity: 0; }
+  #ctrl.oculto * { pointer-events: none !important; }
+  .ctrl-centro { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 7vmin; }
+  .ctrl-centro button, .ctrl-barra input { pointer-events: auto; }
+  .ctrl-centro button { width: 12vmin; height: 12vmin; min-width: 52px; min-height: 52px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3);
+    background: rgba(0,0,0,.45); color: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .ctrl-centro #k-play { width: 16vmin; height: 16vmin; min-width: 64px; min-height: 64px; background: var(--acento); color: #000; border: none; }
+  .ctrl-centro svg { width: 45%; height: 45%; fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .ctrl-barra { position: absolute; left: 8vw; right: 8vw; bottom: 5vmin; display: flex; align-items: center; gap: 2.5vmin;
+    color: #fff; font-size: 2.6vmin; font-variant-numeric: tabular-nums; }
+  .ctrl-barra input { flex: 1; accent-color: var(--acento); height: 6vmin; min-height: 32px; cursor: pointer; }
+  body.ctrl-visible .bar { visibility: hidden; }          /* la barra fija se esconde: la reemplaza la que se arrastra */
+  /* Aviso del doble toque: −10 s / +10 s */
+  #salto { position: fixed; top: 50%; transform: translateY(-50%); z-index: 4; padding: 2vmin 4vmin; border-radius: 99px;
+    background: rgba(0,0,0,.55); color: #fff; font-size: 3.4vmin; font-weight: 600; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #salto.ver { opacity: 1; }
   #rollo .l { text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
   #k { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
@@ -76,6 +95,7 @@
   .bar { display: flex; align-items: center; gap: 2vw; font-size: 2.4vmin; color: var(--suave); font-variant-numeric: tabular-nums; }
   .trk { flex: 1; height: .7vmin; min-height: 3px; border-radius: 99px; background: var(--linea); overflow: hidden; }
   #prog { height: 100%; width: 0; background: var(--acento); transition: width .25s linear; }
+  #ctrl[hidden], .ctrl-barra[hidden] { display: none; }
   /* Al final, para que siempre ganen: lo oculto se oculta */
   .en-vivo[hidden] { display: none; }
   body.vivo .bar { display: none; }
@@ -85,6 +105,16 @@
 <canvas id="fondo" aria-hidden="true"></canvas>
 <button id="salir" type="button" aria-label="Salir" hidden>×</button>
 <button id="letra-k" type="button" hidden></button>
+<!-- Controles: aparecen al tocar la pantalla y se esconden solos -->
+<div id="ctrl" class="oculto" hidden>
+  <div class="ctrl-centro">
+    <button id="k-ant" type="button" aria-label="Anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-9 6 9 6z"/></svg></button>
+    <button id="k-play" type="button" aria-label="Pausar"></button>
+    <button id="k-sig" type="button" aria-label="Siguiente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l9 6-9 6z"/></svg></button>
+  </div>
+  <div class="ctrl-barra" id="k-barra"><span id="k-pos">0:00</span><input type="range" id="k-seek" min="0" max="1000" value="0" aria-label="Posición"><span id="k-dur">0:00</span></div>
+</div>
+<div id="salto" aria-hidden="true"></div>
 <div id="k">
   <div class="top">
     <div><div id="tit"></div><div id="art"></div></div>
@@ -208,9 +238,9 @@ function recibir(m) {
   if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
   // Solo cambió el color (tema dinámico o elegido): se repinta sin reiniciar la letra
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
-  else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
+  else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; posLlego = performance.now(); if (m.sonando != null) sonandoK = !!m.sonando; mover(); pintarControles(); }
 }
-// ---------- Fondo animado: 31 animaciones de líneas, tranquilas ----------
+// ---------- Fondo animado: 44 animaciones de líneas, tranquilas ----------
 // Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
@@ -259,6 +289,86 @@ const Fondo = (() => {
   const alturaBase = (q, i, fr, esp, k = 3.2) => Math.max(0, ruido(q, i) + .45) * centro(q) * (.45 + banda(q) * 1.6 + ola(fr) * 1.4) * esp * k;
 
   // ===== Las 24 animaciones =====
+  // ===== Piezas compartidas por Viaje, Ciudad, Planeta, Túnel, Raíces, Sauce e islas =====
+  const azar = (a, b) => a + Math.random() * (b - a);
+  const ruidoL = (v, s) => Math.sin(v * 1.7 + s) * .5 + Math.sin(v * 3.9 + s * 2.3) * .3 + Math.sin(v * 8.3 + s * .7) * .2;
+  // Árbol con ángulos relativos (para que se meza: cada rama suma el movimiento de la anterior)
+  function arbolL(n, largo, gr, t0) {
+    const nodo = { rel: azar(-.15, .15), largo, gr, t0, d: largo / (80 * u), hijos: [] };
+    if (n > 0 && largo > 8 * u) { const k = Math.random() < .35 ? 3 : 2; for (let i = 0; i < k; i++) { const h = arbolL(n - 1, largo * azar(.62, .8), gr * .7, t0 + largo / (80 * u)); h.rel = (i - (k - 1) / 2) * azar(.35, .6) + azar(-.12, .12); nodo.hijos.push(h); } }
+    return nodo;
+  }
+  function dibujarArbolL(n, x0, y0, ang, prof, fase, apaga, viento) {
+    const a = ang + n.rel + viento(prof, x0), x1 = x0 + Math.cos(a) * n.largo, y1 = y0 + Math.sin(a) * n.largo, p = Math.max(0, Math.min(1, (fase - n.t0) / n.d));
+    if (!p) return;
+    x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + (x1 - x0) * p, y0 + (y1 - y0) * p);
+    const alt = 1 - y1 / H; trazo(n.gr, c(HUE + 20 + alt * 30, 55, 35 + alt * 40, (.35 + alt * .5) * apaga));
+    if (p >= 1) for (const h of n.hijos) dibujarArbolL(h, x1, y1, a, prof + 1, fase, apaga, viento);
+  }
+  // Islas: contorno de una curva de nivel
+  const contornoL = (cx, cy, base, a, sem, mov) => { const r = base * (1 + .18 * Math.sin(3 * a + sem) + .1 * Math.sin(5 * a - mov + sem * 2) + .06 * Math.sin(9 * a + mov * .7)); return [cx + Math.cos(a) * r * 1.5, cy + Math.sin(a) * r]; };
+  function anilloL(cx, cy, base, sem, mov, ancho, col) { x.beginPath(); for (let a = 0; a <= Math.PI * 2 + .01; a += .03) { const p = contornoL(cx, cy, base, a, sem, mov); a ? x.lineTo(...p) : x.moveTo(...p); } x.closePath(); trazo(ancho, col); }
+  // Planeta
+  const rotarL = (X, Y, Zz, incl) => [X, Y * Math.cos(incl) - Zz * Math.sin(incl), Y * Math.sin(incl) + Zz * Math.cos(incl)];
+  function haloL(cx, cy, Rr) { const g = x.createRadialGradient(cx, cy, Rr * .95, cx, cy, Rr * 1.25); g.addColorStop(0, c(HUE + 30, 70, 55, .18)); g.addColorStop(1, c(HUE + 30, 70, 55, 0)); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+  function paralelosL(cx, cy, Rr, incl, rot, n = 24, montes = 0) {
+    x.lineWidth = Math.max(1, u * .9);
+    for (let k = 1; k < n; k++) {
+      const lat = -Math.PI / 2 + k / n * Math.PI; let prev = null;
+      for (let a = 0; a <= Math.PI * 2 + .01; a += .04) {
+        const lon = a + rot, mont = 1 + montes * Math.max(0, Math.sin(lon * 3 + lat * 4) * Math.cos(lon * 1.3 - lat * 2)), r = Rr * mont;
+        const [X, Y, Zz] = rotarL(Math.cos(lat) * Math.cos(a) * r, Math.sin(lat) * r, Math.cos(lat) * Math.sin(a) * r, incl), p = [cx + X, cy + Y, Zz];
+        if (prev && p[2] > 0 && prev[2] > 0) { const b = 1 - p[2] / r; x.strokeStyle = c(HUE + 20 + (mont - 1) * 300, 55 + (mont - 1) * 200, 38 + b * 30 + (mont - 1) * 250, .22 + b * .55); x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(p[0], p[1]); x.stroke(); }
+        prev = p;
+      }
+    }
+  }
+  // Viaje: capas de montañas que pasan a distinta velocidad (con o sin lago)
+  function capasViajeL(hor, alto, capas, conLago) {
+    const todas = [];
+    for (let k = 0; k < capas; k++) {
+      const d = k / (capas - 1), vel = .02 + d * .12, base = conLago ? hor - (1 - d) * alto * .55 : H * (.42 + d * .5), am = (conLago ? 14 + d * 45 : 18 + d * 60) * u;
+      for (let j = 0; j < (conLago ? 2 : 3); j++) {
+        const y0 = base + j * (conLago ? 5 : 4 + d * 6) * u, pts = [];
+        x.beginPath(); x.moveTo(0, y0);
+        for (let px = 0; px <= W; px += 4 * u) { const v = px / W * (2.2 - d * .9) + t * vel * (2 - d) + k * 7.3, h = Math.max(0, ruidoL(v, k * 2.1 + j * .3) + .35) * am * (1 - j * (conLago ? .2 : .18)); pts.push([px, y0 - h]); x.lineTo(px, y0 - h); }
+        x.lineTo(W, conLago ? hor : H); x.lineTo(0, conLago ? hor : H); x.closePath(); tapar();
+        x.globalAlpha = .25 + d * .75; x.strokeStyle = luzCima(y0, am * 1.3); x.lineWidth = Math.max(1, u * (.5 + d * .9)); x.stroke(); x.globalAlpha = 1;
+        todas.push({ pts, d });
+      }
+    }
+    if (!conLago) return;
+    for (const { pts, d } of todas) {
+      x.beginPath(); pts.forEach(([px, py], k) => { const ry = 2 * hor - py + Math.sin(px * .03 / u + t * 1.6 + d * 5) * 1.4 * u; k ? x.lineTo(px, ry) : x.moveTo(px, ry); });
+      const g = x.createLinearGradient(0, hor, 0, H); g.addColorStop(0, c(HUE + 30, 60, 55, .3 * (.3 + d))); g.addColorStop(1, c(HUE, 40, 30, 0)); x.strokeStyle = g; x.lineWidth = Math.max(1, u * .6); x.stroke();
+    }
+    x.beginPath(); x.moveTo(0, hor); x.lineTo(W, hor); trazo(u * .6, c(HUE + 30, 50, 60, .25));
+  }
+  // Ciudad: filas de edificios (anchos, alturas y antenas al azar)
+  const filasCiudad = n => Array.from({ length: n }, () => { const a = []; let px = 0; while (px < 2.2) { const w = azar(.02, .07); a.push({ x: px, w, h: azar(.25, 1), ant: Math.random() < .15 }); px += w + azar(0, .008); } return a; });
+  function filaCiudad(fila, y0, am, off, hasta) {
+    const pts = [[0, y0]]; x.beginPath(); x.moveTo(0, y0);
+    for (const e of fila) {
+      const x1 = (e.x - off) * W, x2 = x1 + e.w * W; if (x2 < 0 || x1 > W) continue;
+      const y = y0 - e.h * am, xm = x1 + e.w * W * .5;
+      const p = e.ant ? [[x1, y0], [x1, y], [xm, y], [xm, y - am * .25], [xm, y], [x2, y], [x2, y0]] : [[x1, y0], [x1, y], [x2, y], [x2, y0]];
+      for (const q of p) { x.lineTo(...q); pts.push(q); }
+    }
+    x.lineTo(W, y0); x.lineTo(W, hasta); x.lineTo(0, hasta); x.closePath(); return pts;
+  }
+  // Ventanas: filas de edificios, cada uno con sus ventanas (que se encienden y apagan)
+  const filasVentanas = n => Array.from({ length: n }, () => { const a = []; let px = 0; while (px < 2.2) { const w = azar(.025, .07); a.push({ x: px, w, h: azar(.3, 1), v: Array.from({ length: 12 }, () => Math.random()) }); px += w + azar(0, .006); } return a; });
+  // Oleaje: líneas horizontales en perspectiva, bajo el horizonte
+  function oleajeL(hor, N, am0) {
+    for (let i = 0; i < N; i++) {
+      const d = i / (N - 1), y0 = hor + Math.pow(d, 1.5) * (H - hor), am = (1 + d * am0) * u;
+      x.beginPath(); for (let px = 0; px <= W; px += 5 * u) { const q = px / W, y = y0 + Math.sin(q * (9 + i * .4) - t * (.6 + d * .4) + i * 1.3) * am + Math.sin(q * 23 - t * 1.1 + i) * am * .3; px ? x.lineTo(px, y) : x.moveTo(px, y); }
+      trazo(u * (.4 + d * .9), c(HUE + 200, 45, 30 + d * 28, .2 + d * .5));
+    }
+  }
+  // Túnel de marcos (esquinas redondeadas)
+  const marco = (cx, cy, w, h, a) => { const cs = Math.cos(a), sn = Math.sin(a); return [cx + Math.sign(cs) * Math.pow(Math.abs(cs), .3) * w / 2, cy + Math.sign(sn) * Math.pow(Math.abs(sn), .3) * h / 2]; };
+
   const EF = [
     { // 1. Clásica
       cuadro() { apiladas(26, H * .16, H * .72, alturaBase, (i, fr) => { tapar(); trazo(u * .9, c(HUE + i * 2, 45 + vol * 20, 40 + fr * 30 + vol * 20, .3 + fr * .45 + vol * .2)); }); } },
@@ -369,18 +479,6 @@ const Fondo = (() => {
           x.beginPath();
           for (let px = 0; px <= W; px += 3 * u) { const q = px / W, d = Math.sin(Math.PI * q * (1 + i % 4)) * Math.sin(t * (8 + i * 2)) * a * esp * .9 + Math.sin(q * 20 + t + i) * .5 * u; px ? x.lineTo(px, y0 + d) : x.moveTo(px, y0 + d); }
           trazo(u * (.6 + (N - i) / N * 1.1), c(HUE + i * 4, 50, 40 + a * 40, .25 + a * .65));
-        }
-      } },
-    { // 16. Dunas: arena ondulada; los golpes son ráfagas
-      crear() { Z.racha = 0; },
-      cuadro(dt) {
-        if (golpe) Z.racha = Math.max(Z.racha, .6); Z.racha = Math.max(0, Z.racha - dt * .5);
-        const N = 40, top = H * .12, esp = H * .8 / N;
-        for (let i = 0; i < N; i++) {
-          const y0 = top + i * esp, fr = i / N, r = Z.racha * Math.exp(-Math.pow((fr - (1 - Z.racha)) * 6, 2));
-          x.beginPath(); x.moveTo(0, y0);
-          for (let px = 0; px <= W; px += 4 * u) { const q = px / W; x.lineTo(px, y0 - (Math.sin(q * 16 + i * .55 + t * .35) * .55 + Math.sin(q * 7 - i * .2 + t * .2) * .45 + 1) * esp * .7 * (.6 + banda(q) * 1.4 + r * 2.5)); }
-          x.lineTo(W, y0 + H); x.lineTo(0, y0 + H); x.closePath(); tapar(); trazo(u * .8, c(HUE + 25 + fr * 10, 40, 35 + fr * 35, .25 + fr * .55));
         }
       } },
     { // 17. Corona: rayos alrededor del centro
@@ -529,18 +627,6 @@ const Fondo = (() => {
         });
       } },
     // ===== Nubes =====
-    { // 27. Cúmulos: líneas que se inflan en lomos redondos, con las cimas iluminadas
-      crear() { const R = (a, b) => a + Math.random() * (b - a); Z.lomos = Array.from({ length: 20 }, () => Array.from({ length: 5 }, () => ({ c: R(0, 1.3), r: R(.05, .12), v: R(.004, .01) }))); },
-      cuadro() {
-        const N = 20, top = H * .2, esp = H * .68 / N;
-        for (let i = 0; i < N; i++) {
-          const y0 = top + i * esp, fr = i / N;
-          x.beginPath(); x.moveTo(0, y0);
-          for (let px = 0; px <= W; px += 3 * u) { const q = px / W; let h = 0; for (const l of Z.lomos[i]) { const cc = ((l.c + t * l.v) % 1.3) - .15, dd = q - cc; if (Math.abs(dd) < l.r) h = Math.max(h, Math.sqrt(l.r * l.r - dd * dd) / l.r); } x.lineTo(px, y0 - h * esp * 2.2); }
-          x.lineTo(W, y0 + H); x.lineTo(0, y0 + H); x.closePath(); tapar();
-          x.strokeStyle = luzCima(y0, esp * 2.2); x.lineWidth = Math.max(1, u * (.7 + fr * .5)); x.stroke();
-        }
-      } },
     { // 28. Mar de nubes: un manto suave que se desliza, visto desde lo alto
       cuadro() {
         const N = 24, hor = H * .25;
@@ -582,17 +668,158 @@ const Fondo = (() => {
           }
         }
       } },
-    { // 31. Banderas: cintas que ondean desde un lado
+    { // 32. Viaje: capas de montañas que pasan, como mirando por la ventana de un tren
+      cuadro() { capasViajeL(H, H, 6, false); } },
+    { // 33. Ciudad: siluetas de edificios en capas, con los techos iluminados
+      crear() { Z.cd = filasCiudad(12); },
       cuadro() {
-        const N = 14, x0 = W * .06;
+        const N = 12;
         for (let i = 0; i < N; i++) {
-          const y0 = H * (.12 + i / (N - 1) * .76);
-          x.beginPath();
-          for (let px = x0; px <= W; px += 4 * u) { const q = (px - x0) / (W - x0), y = y0 + Math.sin(q * 7 - t * 2.4 + i * .55) * 20 * u * Math.pow(q, 1.2) + Math.sin(q * 17 - t * 3.1 + i) * 3 * u * q; px > x0 ? x.lineTo(px, y) : x.moveTo(px, y); }
-          const g = x.createLinearGradient(x0, 0, W, 0); g.addColorStop(0, c(HUE, 35, 30, .25)); g.addColorStop(1, c(HUE + 30, 70, 68, .9));
-          x.strokeStyle = g; x.lineWidth = Math.max(1, u * (1.2 - i * .03)); x.stroke();
+          const d = i / (N - 1), y0 = H * (.35 + Math.pow(d, 1.3) * .6), am = (25 + d * 70) * u, off = (t * (.004 + d * .016)) % 1.1;
+          filaCiudad(Z.cd[i], y0, am, off, H); tapar();
+          x.globalAlpha = .25 + d * .75; x.strokeStyle = luzCima(y0, am, HUE + 10); x.lineWidth = Math.max(1, u * (.5 + d * .8)); x.stroke(); x.globalAlpha = 1;
         }
-        x.beginPath(); x.moveTo(x0, H * .08); x.lineTo(x0, H * .92); trazo(u * 1.4, c(HUE, 25, 45, .5));
+      } },
+    { // 34. Planeta: un mundo de líneas que gira, con montañas
+      cuadro() { const cx = W / 2, cy = H / 2, Rr = H * .36; paralelosL(cx, cy, Rr, .35, t * .08, 26, .07); haloL(cx, cy, Rr); } },
+    { // 35. Túnel: marcos que se acercan sin prisa
+      cuadro() {
+        const N = 16, cx = W / 2, cy = H / 2;
+        for (let k = 0; k < N; k++) {
+          const z = (k / N + t * .035) % 1, s = Math.pow(z, 2.2), w = W * .06 + s * W * 1.1, h = H * .05 + s * H * 1.1, ond = Math.sin(t * .6 + k) * .02;
+          x.beginPath(); for (let a = 0; a <= Math.PI * 2 + .01; a += .05) { const [px, py] = marco(cx, cy, w * (1 + ond * Math.sin(a * 3 + t)), h, a); a ? x.lineTo(px, py) : x.moveTo(px, py); }
+          x.closePath(); trazo(u * (.4 + z * 1.6), c(HUE + z * 40, 60, 40 + z * 30, Math.sin(z * Math.PI) * .75));
+        }
+      } },
+    { // 36. Raíces al viento: crecen, se ramifican y se mecen (las puntas más que la base)
+      cuadro() {
+        const ciclo = 24, fase = t % ciclo, n = Math.floor(t / ciclo);
+        if (!Z.arb || Z.ciclo !== n) { Z.ciclo = n; Z.arb = [0, 1, 2].map(i => ({ x: W * (.3 + i * .2), n: arbolL(7, H * .2, u * 2.4, i * .8) })); }
+        const apaga = fase > ciclo - 3 ? (ciclo - fase) / 3 : 1, viento = (prof, x0) => (Math.sin(t * .9 + x0 * .004 + prof * .45) * .045 + Math.sin(t * 2.1 + prof) * .012) * prof;
+        x.lineCap = 'round'; for (const a of Z.arb) dibujarArbolL(a.n, a.x, H * 1.02, -Math.PI / 2, 0, fase, apaga, viento); x.lineCap = 'butt';
+      } },
+    { // 37. Sauce: ramas que cuelgan desde arriba y el viento mueve
+      crear() { Z.sau = Array.from({ length: 9 }, (_, i) => ({ x: i * .105 + .08 + azar(-.01, .01), n: azar(14, 22) | 0, l: azar(.5, .85), f: azar(0, 6) })); },
+      cuadro() {
+        x.lineCap = 'round';
+        for (const r of Z.sau) for (let k = 0; k < r.n; k++) {
+          const off = (k / r.n - .5) * W * .06, largo = H * r.l * (.7 + .3 * Math.sin(k * 1.7 + r.f)), rx = r.x * W;
+          x.beginPath(); x.moveTo(rx + off, -5 * u);
+          for (let s = 1; s <= 30; s++) { const q = s / 30; x.lineTo(rx + off * (1 + q * .6) + Math.sin(t * .8 + r.f + k * .3 + q * 2.2) * q * q * 26 * u + Math.sin(t * 1.9 + k) * q * q * 6 * u, -5 * u + q * largo); }
+          const g = x.createLinearGradient(0, 0, 0, largo); g.addColorStop(0, c(HUE + 20, 40, 30, .25)); g.addColorStop(1, c(HUE + 35, 70, 68, .75));
+          x.strokeStyle = g; x.lineWidth = Math.max(1, u * .8); x.stroke();
+        }
+        x.lineCap = 'butt';
+      } },
+    { // 38. Isla túnel: las curvas de nivel nacen en la cima y se abren hacia afuera
+      cuadro() {
+        const cx = W / 2, cy = H / 2, N = 16;
+        for (let k = 0; k < N; k++) { const z = (k / N + t * .03) % 1; anilloL(cx, cy, Math.pow(z, 1.5) * H * .62 + H * .01, 1, t * .07 + z * 2, u * (.5 + z * 1.3), c(HUE + 30 * (1 - z), 45 + (1 - z) * 30, 32 + (1 - z) * 35, Math.sin(z * Math.PI) * .85)); }
+      } },
+    { // 40. Túnel circular: anillos que se acercan y ondulan apenas
+      cuadro() {
+        const N = 18, cx = W / 2, cy = H / 2;
+        for (let k = 0; k < N; k++) {
+          const z = (k / N + t * .035) % 1, r = H * .03 + Math.pow(z, 2.2) * H * .9;
+          x.beginPath(); for (let a = 0; a <= Math.PI * 2 + .01; a += .04) { const rr = r * (1 + .025 * Math.sin(a * 5 + t * .8 + k) * z); a ? x.lineTo(cx + Math.cos(a) * rr * 1.2, cy + Math.sin(a) * rr) : x.moveTo(cx + rr * 1.2, cy); }
+          x.closePath(); trazo(u * (.4 + z * 1.6), c(HUE + z * 40, 60, 40 + z * 30, Math.sin(z * Math.PI) * .75));
+        }
+      } },
+    { // 42. Planeta con anillos: el planeta gira dentro de sus anillos
+      cuadro() {
+        const cx = W / 2, cy = H / 2, Rr = H * .26, incl = .42, rot = t * .08;
+        const anillos = delante => { for (let k = 0; k < 7; k++) { const rr = Rr * (1.45 + k * .09); x.beginPath(); let dentro = false; for (let a = 0; a <= Math.PI * 2 + .01; a += .03) { const [X, Y, Zz] = rotarL(Math.cos(a + rot * .3) * rr, 0, Math.sin(a + rot * .3) * rr, incl + .12), ok = delante ? Zz > 0 : Zz <= 0; if (ok) { dentro ? x.lineTo(cx + X, cy + Y) : x.moveTo(cx + X, cy + Y); dentro = true; } else dentro = false; } trazo(u * .8, c(HUE + 30 + k * 4, 60, 50 + k * 3, delante ? .55 : .2)); } };
+        anillos(false); x.beginPath(); x.arc(cx, cy, Rr * 1.01, 0, Math.PI * 2); tapar(); paralelosL(cx, cy, Rr, incl, rot, 20); anillos(true); haloL(cx, cy, Rr);
+      } },
+    { // 43. Planeta de meridianos: el mundo dibujado de polo a polo, girando
+      cuadro() {
+        const cx = W / 2, cy = H / 2, Rr = H * .36, incl = .35, rot = t * .1; x.lineWidth = Math.max(1, u * .9);
+        for (let k = 0; k < 24; k++) {
+          const lon = k / 24 * Math.PI * 2 + rot; let prev = null;
+          for (let la = -Math.PI / 2; la <= Math.PI / 2 + .01; la += .04) {
+            const mont = 1 + .05 * Math.max(0, Math.sin(lon * 3 + la * 4)), r = Rr * mont;
+            const [X, Y, Zz] = rotarL(Math.cos(la) * Math.cos(lon) * r, Math.sin(la) * r, Math.cos(la) * Math.sin(lon) * r, incl), p = [cx + X, cy + Y, Zz];
+            if (prev && p[2] > 0 && prev[2] > 0) { const b = 1 - p[2] / r; x.strokeStyle = c(HUE + 20 + (mont - 1) * 300, 55, 38 + b * 30 + (mont - 1) * 300, .22 + b * .55); x.beginPath(); x.moveTo(prev[0], prev[1]); x.lineTo(p[0], p[1]); x.stroke(); }
+            prev = p;
+          }
+        }
+        haloL(cx, cy, Rr);
+      } },
+    { // 44. Viaje con lago: las montañas pasan y se reflejan en el agua
+      cuadro() { capasViajeL(H * .6, H * .5, 5, true); } },
+    { // 45. Ciudad reflejada: la ciudad y su reflejo en el río
+      crear() { Z.cd = filasCiudad(8); },
+      cuadro() {
+        const hor = H * .62, N = 8, todas = [];
+        for (let i = 0; i < N; i++) {
+          const d = i / (N - 1), y0 = hor - (1 - d) * H * .12, am = (20 + d * 55) * u, off = (t * (.004 + d * .016)) % 1.1;
+          const pts = filaCiudad(Z.cd[i], y0, am, off, hor); tapar();
+          x.globalAlpha = .3 + d * .7; x.strokeStyle = luzCima(y0, am, HUE + 10); x.lineWidth = Math.max(1, u * (.5 + d * .8)); x.stroke(); x.globalAlpha = 1;
+          todas.push({ pts, d });
+        }
+        for (const { pts, d } of todas) {
+          x.beginPath(); pts.forEach(([px, py], k) => { const ry = 2 * hor - py + Math.sin(py * .08 / u + t * 1.8) * 1.5 * u; k ? x.lineTo(px + Math.sin(ry * .05 / u + t * 1.3) * 1.2 * u, ry) : x.moveTo(px, ry); });
+          const g = x.createLinearGradient(0, hor, 0, H); g.addColorStop(0, c(HUE + 30, 60, 55, .3 * (.3 + d))); g.addColorStop(1, c(HUE, 40, 30, 0)); x.strokeStyle = g; x.lineWidth = Math.max(1, u * .6); x.stroke();
+        }
+        x.beginPath(); x.moveTo(0, hor); x.lineTo(W, hor); trazo(u * .6, c(HUE + 30, 50, 60, .25));
+      } },
+    // ===== Urbano y marítimo =====
+    { // 41. Ventanas: la ciudad de noche, con ventanas que se encienden y apagan
+      crear() { Z.f = filasVentanas(6); },
+      cuadro() {
+        const N = 6;
+        for (let i = 0; i < N; i++) {
+          const d = i / (N - 1), y0 = H * (.45 + Math.pow(d, 1.2) * .52), am = (40 + d * 90) * u, off = (t * (.003 + d * .01)) % 1.1, ed = [];
+          x.beginPath(); x.moveTo(0, y0);
+          for (const e of Z.f[i]) { const x1 = (e.x - off) * W, x2 = x1 + e.w * W; if (x2 < 0 || x1 > W) continue; const y = y0 - e.h * am; x.lineTo(x1, y0); x.lineTo(x1, y); x.lineTo(x2, y); x.lineTo(x2, y0); ed.push([x1, x2, y, e]); }
+          x.lineTo(W, y0); x.lineTo(W, H); x.lineTo(0, H); x.closePath(); tapar();
+          x.globalAlpha = .3 + d * .7; x.strokeStyle = luzCima(y0, am, HUE + 10); x.lineWidth = Math.max(1, u * (.5 + d * .8)); x.stroke();
+          x.fillStyle = c(HUE + 40, 70, 70, .35 + d * .4);
+          for (const [x1, x2, y, e] of ed) {
+            const cols = Math.max(1, Math.floor((x2 - x1) / (7 * u))), rows = Math.max(1, Math.floor((y0 - y) / (9 * u)));
+            for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) { const v = e.v[(r * cols + k) % 12]; if (Math.sin(t * .15 + v * 40 + r) > .55 - v * .3) x.fillRect(x1 + 3 * u + k * 7 * u, y + 4 * u + r * 9 * u, 2.2 * u, 3 * u); }
+          }
+          x.globalAlpha = 1;
+        }
+      } },
+    { // 42. Rascacielos: mirar hacia arriba entre torres de luz
+      cuadro() {
+        const cx = W * .5, cy = -H * .4, N = 9;
+        for (let k = 0; k < N; k++) {
+          const ang = (k / (N - 1) - .5) * 2.2 + Math.sin(t * .05) * .05, anch = .07 + .03 * Math.sin(k * 1.7);
+          for (const e of [ang - anch, ang + anch]) {
+            x.beginPath(); x.moveTo(cx + Math.sin(e) * W * 1.3, H * 1.05); x.lineTo(cx + Math.sin(e) * W * .08, cy + H * .55);
+            const g = x.createLinearGradient(0, H, 0, 0); g.addColorStop(0, c(HUE, 35, 30, .3)); g.addColorStop(1, c(HUE + 30, 70, 70, .85));
+            x.strokeStyle = g; x.lineWidth = Math.max(1, u * 1.1); x.stroke();
+          }
+          for (let p = 1; p < 9; p++) {
+            const q = Math.pow(p / 9, 1.6), y = H * 1.05 - (H * 1.05 - (cy + H * .55)) * q;
+            x.beginPath(); x.moveTo(cx + Math.sin(ang - anch) * W * (1.3 - 1.22 * q), y); x.lineTo(cx + Math.sin(ang + anch) * W * (1.3 - 1.22 * q), y);
+            trazo(u * .5, c(HUE + 20, 45, 45, .15 + .25 * Math.max(0, Math.sin(t * .3 + k + p))));
+          }
+        }
+      } },
+    { // 43. Velero: un velero cruza despacio sobre el oleaje
+      cuadro() {
+        const hor = H * .58; oleajeL(hor, 22, 8);
+        const vx = ((t * .012) % 1.3 - .15) * W, vy = hor + 2 * u + Math.sin(t * 1.1) * 1.5 * u;
+        x.beginPath(); x.moveTo(vx - 24 * u, vy); x.quadraticCurveTo(vx, vy + 8 * u, vx + 26 * u, vy); trazo(u * 1.3, c(HUE + 20, 40, 55, .85));
+        x.beginPath(); x.moveTo(vx, vy); x.lineTo(vx, vy - 62 * u); x.lineTo(vx + 24 * u, vy - 6 * u); x.closePath(); tapar(); trazo(u * 1.2, c(HUE + 30, 70, 68, .9));
+        x.beginPath(); x.moveTo(vx - 2 * u, vy - 56 * u); x.lineTo(vx - 22 * u, vy - 8 * u); x.lineTo(vx - 2 * u, vy - 8 * u); trazo(u, c(HUE + 30, 60, 58, .7));
+        for (let i = 0; i < 5; i++) { x.beginPath(); x.moveTo(vx - 10 * u, vy + (i * 3 + 3) * u); x.lineTo(vx + 12 * u, vy + (i * 3 + 3) * u); trazo(u * .6, c(HUE + 30, 60, 55, .25 - i * .04)); }
+      } },
+    { // 44. Luna en el mar: el oleaje y el camino de luz de la luna
+      cuadro() {
+        const hor = H * .45, mx = W * .62, my = H * .18;
+        const g = x.createRadialGradient(mx, my, 0, mx, my, 60 * u); g.addColorStop(0, c(HUE + 40, 60, 85, .35)); g.addColorStop(1, c(HUE + 40, 60, 85, 0)); x.fillStyle = g; x.fillRect(0, 0, W, hor);
+        x.beginPath(); x.arc(mx, my, 14 * u, 0, Math.PI * 2); trazo(u * 1.4, c(HUE + 40, 70, 85, .9));
+        for (let i = 0; i < 26; i++) {
+          const d = i / 25, y0 = hor + Math.pow(d, 1.5) * (H - hor), am = (1 + d * 7) * u;
+          x.beginPath(); for (let px = 0; px <= W; px += 5 * u) { const q = px / W, y = y0 + Math.sin(q * (9 + i * .4) - t * (.6 + d * .4) + i * 1.3) * am; px ? x.lineTo(px, y) : x.moveTo(px, y); }
+          const gg = x.createLinearGradient(0, 0, W, 0), an = .05 + d * .2, base = c(HUE + 200, 40, 30, .2 + d * .3);
+          gg.addColorStop(0, base); gg.addColorStop(Math.max(0, mx / W - an), base); gg.addColorStop(mx / W, c(HUE + 40, 80, 82, .85)); gg.addColorStop(Math.min(1, mx / W + an), base); gg.addColorStop(1, base);
+          x.strokeStyle = gg; x.lineWidth = Math.max(1, u * (.4 + d * .9)); x.stroke();
+        }
       } },
   ];
 
@@ -648,21 +875,71 @@ const Fondo = (() => {
 
 // Salir del karaoke: al tocar la pantalla aparece la ×, y se esconde sola a los 3 s.
 // En el teléfono avisa a la app; en la PC cierra la ventana del karaoke. En la tele nadie toca la pantalla.
-let ocultarSalir = 0;
+let ocultarSalir = 0, posLlego = 0, sonandoK = true, arrastrando = false, ultToque = { t: 0, lado: 0 }, ocultarSalto = 0;
 const comandoKaraoke = c => { if (window.OidoKaraoke && window.OidoKaraoke.comando) window.OidoKaraoke.comando(c); else if (window.oidoKaraoke) window.oidoKaraoke.comando(c); };
 const puedeOrdenar = () => !!((window.OidoKaraoke && window.OidoKaraoke.comando) || window.oidoKaraoke);
-function mostrarSalir() {
+const ICONO_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>';
+const ICONO_PAUSA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke-width="3"/></svg>';
+const posAhora = () => pos + (sonandoK ? Math.min(1500, performance.now() - posLlego) : 0);
+function pintarControles() {
+  const c = cancion || {};
+  $('#k-play').innerHTML = sonandoK ? ICONO_PAUSA : ICONO_PLAY;
+  $('#k-play').setAttribute('aria-label', sonandoK ? 'Pausar' : 'Reproducir');
+  $('#k-barra').hidden = !!c.vivo || !dur;                     // en vivo no hay a dónde saltar
+  if (!arrastrando && dur) { $('#k-seek').value = Math.round(pos / dur * 1000); $('#k-pos').textContent = fmt(pos); $('#k-dur').textContent = fmt(dur); }
+}
+function esconder() {
+  if (arrastrando) return;
+  $('#salir').classList.add('oculto'); $('#letra-k').classList.add('oculto'); $('#ctrl').classList.add('oculto');
+  document.body.classList.remove('ctrl-visible');
+}
+function mostrarControles() {
   const b = $('#salir'), lk = $('#letra-k'), c = cancion || {};
   b.hidden = false; b.classList.remove('oculto');
   // Ocultar/mostrar la letra: solo si la canción tiene letra y se puede avisar a la app
   const tiene = !!(c.letra || c.letraOculta) && puedeOrdenar();
   lk.hidden = !tiene; lk.classList.remove('oculto');
   if (tiene) lk.textContent = c.letraOculta ? ((c.textos && c.textos.mostrar) || 'Mostrar letra') : ((c.textos && c.textos.ocultar) || 'Ocultar letra');
-  clearTimeout(ocultarSalir); ocultarSalir = setTimeout(() => { b.classList.add('oculto'); lk.classList.add('oculto'); }, 3000);
+  // Controles de la canción (no en la tele: ahí se controla desde el teléfono)
+  if (puedeOrdenar()) { $('#ctrl').hidden = false; $('#ctrl').classList.remove('oculto'); document.body.classList.add('ctrl-visible'); pintarControles(); }
+  clearTimeout(ocultarSalir); ocultarSalir = setTimeout(esconder, 3000);
 }
-$('#letra-k').onclick = () => { const c = cancion || {}; comandoKaraoke(c.letraOculta ? 'mostrar-letra' : 'ocultar-letra'); mostrarSalir(); };
-addEventListener('pointerdown', e => { if (e.target.id !== 'salir' && e.target.id !== 'letra-k') mostrarSalir(); });
-addEventListener('mousemove', mostrarSalir);
+const mostrarSalir = mostrarControles;
+const ir = ms => { if (!dur) return; ms = Math.max(0, Math.min(dur - 500, ms)); pos = ms; posLlego = performance.now(); comandoKaraoke('ir:' + Math.round(ms)); pintarControles(); };
+function avisoSalto(txt, lado) {
+  const el = $('#salto'); el.textContent = txt;
+  el.style.left = lado < 0 ? '12vw' : ''; el.style.right = lado > 0 ? '12vw' : '';
+  el.classList.add('ver'); clearTimeout(ocultarSalto); ocultarSalto = setTimeout(() => el.classList.remove('ver'), 700);
+}
+$('#k-play').onclick = () => { comandoKaraoke('alternar'); sonandoK = !sonandoK; pintarControles(); mostrarControles(); };
+$('#k-sig').onclick = () => { comandoKaraoke('siguiente'); mostrarControles(); };
+$('#k-ant').onclick = () => { comandoKaraoke('anterior'); mostrarControles(); };
+$('#k-seek').addEventListener('input', () => { arrastrando = true; $('#k-pos').textContent = fmt(+$('#k-seek').value / 1000 * dur); clearTimeout(ocultarSalir); });
+$('#k-seek').addEventListener('change', () => { arrastrando = false; ir(+$('#k-seek').value / 1000 * dur); mostrarControles(); });
+$('#letra-k').onclick = () => { const c = cancion || {}; comandoKaraoke(c.letraOculta ? 'mostrar-letra' : 'ocultar-letra'); mostrarControles(); };
+// Tocar la pantalla muestra los controles; doble toque a un lado salta 10 s
+addEventListener('pointerdown', e => {
+  if (e.target && e.target.closest && e.target.closest('button, input')) return;
+  const ahora = performance.now(), x = e.clientX / innerWidth, lado = x < .33 ? -1 : x > .67 ? 1 : 0;
+  const c = cancion || {};
+  if (lado && ultToque.lado === lado && ahora - ultToque.t < 320 && puedeOrdenar() && !c.vivo && dur) {
+    ir(posAhora() + lado * 10000); avisoSalto(lado < 0 ? '−10 s' : '+10 s', lado); ultToque = { t: 0, lado: 0 };
+  } else ultToque = { t: ahora, lado };
+  mostrarControles();
+});
+addEventListener('mousemove', mostrarControles);
+// Teclado (PC): espacio pausa, ← → saltan 5 s, N siguiente, P anterior, Esc cierra
+addEventListener('keydown', e => {
+  const enCampo = e.target && e.target.closest && e.target.closest('input');
+  if (!puedeOrdenar() || enCampo) { if (e.key !== 'Escape') return; }
+  const c = cancion || {};
+  if (e.key === ' ') { e.preventDefault(); $('#k-play').onclick(); }
+  else if (e.key === 'ArrowLeft' && !c.vivo) { e.preventDefault(); ir(posAhora() - 5000); avisoSalto('−5 s', -1); mostrarControles(); }
+  else if (e.key === 'ArrowRight' && !c.vivo) { e.preventDefault(); ir(posAhora() + 5000); avisoSalto('+5 s', 1); mostrarControles(); }
+  else if (e.key === 'n' || e.key === 'N') $('#k-sig').onclick();
+  else if (e.key === 'p' || e.key === 'P') $('#k-ant').onclick();
+  else if (e.key === 'Escape') $('#salir').onclick();
+});
 $('#salir').onclick = () => { if (window.OidoKaraoke) window.OidoKaraoke.salir(); else window.close(); };
 
 window.__karaoke = recibir;                                // tele: lo llama Android
