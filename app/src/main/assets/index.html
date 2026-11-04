@@ -127,6 +127,7 @@
   /* Compartir Oído: a la izquierda, en espejo del botón de letra */
   .controles #btn-compartir-oido { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--suave); }
   .controles #btn-letra.activo { color: var(--acento); }
+  .controles #btn-letra.apagada { color: var(--suave); opacity: .8; }
   .controles #btn-letra.lleno { color: var(--acento); background: var(--tinte); }
   #franja {
     display: flex; flex-direction: column; min-width: 0;
@@ -244,6 +245,7 @@
     <span id="letra-titulo"></span>
     <span id="pista-karaoke" hidden data-t="f11Karaoke" data-t-title="karaokeCompleto">F11 · Karaoke</span>
     <span class="acciones-letra">
+      <button id="btn-ocultar-letra" hidden data-t-title="ocultarLetra" data-t-aria="ocultarLetra"></button>
       <button id="btn-deshacer" hidden data-t-title="deshacerAjuste" data-t-aria="deshacerAjuste"></button>
       <button id="btn-sync" hidden data-t-aria="sincronizarLetra"></button>
       <button id="btn-cancelar-sync" hidden data-t="cancelar">Cancelar</button>
@@ -445,6 +447,7 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
+    ocultarLetra: 'Ocultar letra de esta canción', mostrarLetraOculta: 'Mostrar la letra (oculta en esta canción)', letraOcultaAviso: 'Letra oculta en esta canción. Toca el botón de letra para volver a verla.', ocultarLetraCorto: 'Ocultar letra', mostrarLetraCorto: 'Mostrar letra',
     modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente', salirKaraoke: 'Salir del karaoke',
     buscarEnYoutube: 'Buscar en YouTube', buscar: 'Buscar', cambiarTema: 'Cambiar tema', tema: 'Tema', tonoTema: 'Tono del tema', tono: 'Tono {n}',
     listo: 'Listo', dinamico: 'Dinámico', dinamicoTitulo: 'Los colores cambian solos, despacio', idioma: 'Idioma', automatico: 'Automático',
@@ -482,6 +485,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
+    ocultarLetra: 'Hide lyrics for this song', mostrarLetraOculta: 'Show lyrics (hidden for this song)', letraOcultaAviso: 'Lyrics hidden for this song. Tap the lyrics button to show them again.', ocultarLetraCorto: 'Hide lyrics', mostrarLetraCorto: 'Show lyrics',
     modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen', salirKaraoke: 'Exit karaoke',
     buscarEnYoutube: 'Search YouTube', buscar: 'Search', cambiarTema: 'Change theme', tema: 'Theme', tonoTema: 'Theme hue', tono: 'Hue {n}',
     listo: 'Done', dinamico: 'Dynamic', dinamicoTitulo: 'Colors change on their own, slowly', idioma: 'Language', automatico: 'Automatic',
@@ -519,6 +523,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
+    ocultarLetra: 'Ocultar letra desta música', mostrarLetraOculta: 'Mostrar a letra (oculta nesta música)', letraOcultaAviso: 'Letra oculta nesta música. Toque no botão de letra para vê-la de novo.', ocultarLetraCorto: 'Ocultar letra', mostrarLetraCorto: 'Mostrar letra',
     modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente', salirKaraoke: 'Sair do karaokê',
     buscarEnYoutube: 'Pesquisar no YouTube', buscar: 'Pesquisar', cambiarTema: 'Mudar tema', tema: 'Tema', tonoTema: 'Tom do tema', tono: 'Tom {n}',
     listo: 'Pronto', dinamico: 'Dinâmico', dinamicoTitulo: 'As cores mudam sozinhas, devagar', idioma: 'Idioma', automatico: 'Automático',
@@ -556,6 +561,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
+    ocultarLetra: 'Masquer les paroles de ce titre', mostrarLetraOculta: 'Afficher les paroles (masquées pour ce titre)', letraOcultaAviso: 'Paroles masquées pour ce titre. Touchez le bouton des paroles pour les revoir.', ocultarLetraCorto: 'Masquer les paroles', mostrarLetraCorto: 'Afficher les paroles',
     modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance', salirKaraoke: 'Quitter le karaoké',
     buscarEnYoutube: 'Rechercher sur YouTube', buscar: 'Rechercher', cambiarTema: 'Changer de thème', tema: 'Thème', tonoTema: 'Teinte du thème', tono: 'Teinte {n}',
     listo: 'OK', dinamico: 'Dynamique', dinamicoTitulo: 'Les couleurs changent toutes seules, lentement', idioma: 'Langue', automatico: 'Automatique',
@@ -593,6 +599,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
+    ocultarLetra: 'Liedtext für diesen Song ausblenden', mostrarLetraOculta: 'Liedtext anzeigen (für diesen Song ausgeblendet)', letraOcultaAviso: 'Liedtext für diesen Song ausgeblendet. Tippe auf die Liedtext-Taste, um ihn wieder zu sehen.', ocultarLetraCorto: 'Liedtext ausblenden', mostrarLetraCorto: 'Liedtext anzeigen',
     modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm', salirKaraoke: 'Karaoke beenden',
     buscarEnYoutube: 'Auf YouTube suchen', buscar: 'Suchen', cambiarTema: 'Design ändern', tema: 'Design', tonoTema: 'Farbton des Designs', tono: 'Farbton {n}',
     listo: 'Fertig', dinamico: 'Dynamisch', dinamicoTitulo: 'Die Farben ändern sich langsam von selbst', idioma: 'Sprache', automatico: 'Automatisch',
@@ -630,6 +637,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
+    ocultarLetra: 'この曲の歌詞を隠す', mostrarLetraOculta: '歌詞を表示（この曲では非表示）', letraOcultaAviso: 'この曲の歌詞を非表示にしました。歌詞ボタンを押すと再び表示できます。', ocultarLetraCorto: '歌詞を隠す', mostrarLetraCorto: '歌詞を表示',
     modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面', salirKaraoke: 'カラオケを終了',
     buscarEnYoutube: 'YouTube を検索', buscar: '検索', cambiarTema: 'テーマを変更', tema: 'テーマ', tonoTema: 'テーマの色合い', tono: '色合い {n}',
     listo: '完了', dinamico: 'ダイナミック', dinamicoTitulo: '色がゆっくり自動で変わります', idioma: '言語', automatico: '自動',
@@ -699,6 +707,8 @@ function traducirPagina() {
 }
 
 const ICONOS = {
+  ocultar: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
+  letraApagada: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5" opacity=".55"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none" opacity=".55"/><path d="M3 3l18 18"/>',
   microfono: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
   ondas: '<path d="M2 12c2-4 3.5-4 5 0s3 4 5 0 3.5-4 5 0 3 4 5 0"/><path d="M2 17c2-2.5 3.5-2.5 5 0s3 2.5 5 0 3.5-2.5 5 0 3 2.5 5 0" opacity=".5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
@@ -1237,6 +1247,7 @@ const textoRespaldo = () => JSON.stringify({
   app: 'Oido', formato: 1, exportado: new Date().toISOString(),
   listas: listas.map(l => ({ nombre: l.nombre, items: l.items.map(soloVideo) })),
   ajustes,   // sincronizaciones de letra hechas a mano
+  ocultas: [...ocultas],   // canciones con la letra oculta
 }, null, 1);
 
 async function guardarCopia() {
@@ -1280,6 +1291,7 @@ function importarListas(texto) {
     }
     guardarAjustes();
   }
+  if (datos && Array.isArray(datos.ocultas)) { for (const id of datos.ocultas) if (typeof id === 'string') ocultas.add(id); guardarOcultas(); }
   guardar();
   vista = 'mislistas';
   pintar();
@@ -1307,6 +1319,31 @@ let ajustandoFino = false;    // panel de ajuste fino (± 0,25 s / ± 1 s)
 let ajustes = {};
 try { ajustes = JSON.parse(localStorage.getItem('oido-ajustes') || '{}') || {}; } catch {}
 const guardarAjustes = () => { try { localStorage.setItem('oido-ajustes', JSON.stringify(ajustes)); } catch {} };
+// Canciones cuya letra prefieres no ver (por ejemplo, porque está desfasada)
+let ocultas = new Set();
+try { ocultas = new Set(JSON.parse(localStorage.getItem('oido-letras-ocultas') || '[]')); } catch {}
+const guardarOcultas = () => { try { localStorage.setItem('oido-letras-ocultas', JSON.stringify([...ocultas])); } catch {} };
+// Toda letra pasa por aquí: se aplican tus ajustes y, si la ocultaste, se guarda aparte
+function prepararLetra(id, r) {
+  const l = conAjuste(id, r);
+  return ocultas.has(id) && l && (l.estado === 'sinc' || l.estado === 'fija') ? { id, estado: 'oculta', real: l } : l;
+}
+function ocultarLetra() {
+  if (!letra || (letra.estado !== 'sinc' && letra.estado !== 'fija')) return;
+  ocultas.add(letra.id); guardarOcultas();
+  sincronizando = false; ajustandoFino = false;
+  letra = { id: letra.id, estado: 'oculta', real: letra };
+  avisar(t('letraOcultaAviso'));
+  pintarLetra();
+}
+function mostrarLetraOculta() {
+  if (!letra || letra.estado !== 'oculta') return;
+  ocultas.delete(letra.id); guardarOcultas();
+  letra = letra.real;
+  pintarLetra();
+}
+// Órdenes que llegan desde la pantalla del karaoke (botón junto a la ×)
+window.__karaokeComando = c => { if (c === 'ocultar-letra') ocultarLetra(); else if (c === 'mostrar-letra') mostrarLetraOculta(); };
 
 // Aplica el ajuste guardado (si lo hay) a la letra tal como vino de LRCLIB
 function conAjuste(id, r) {
@@ -1399,12 +1436,12 @@ function actualizarLetra(s) {
     ajustandoFino = false;
     tituloLetra = it ? it.titulo : '';
     if (!id) letra = null;
-    else if (cacheLetra.has(id)) letra = conAjuste(id, cacheLetra.get(id));
+    else if (cacheLetra.has(id)) letra = prepararLetra(id, cacheLetra.get(id));
     else {
       letra = { id, estado: 'cargando' };
       buscarLetra(it).then(r => {
         cacheLetra.set(id, r);
-        if (letra && letra.id === id) { letra = conAjuste(id, r); pintarLetra(); }
+        if (letra && letra.id === id) { letra = prepararLetra(id, r); pintarLetra(); }
       }).catch(() => {
         if (letra && letra.id === id) { letra = { id, estado: 'sin' }; pintarLetra(); }
       });
@@ -1421,11 +1458,15 @@ function pintarLetra() {
   const mini = modoLetra === 'mini' && est === 'sinc';
   pantallaLetra = modoLetra === 'completa' && (conLetra || est === 'cargando');
   const b = $('#btn-letra');
-  b.hidden = !(conLetra || pantallaLetra);
+  const oculta = est === 'oculta';
+  b.hidden = !(conLetra || pantallaLetra || oculta);
+  b.classList.toggle('apagada', oculta);
+  b.innerHTML = icono(oculta ? 'letraApagada' : 'letra', 24);
   b.classList.toggle('activo', mini);
   b.classList.toggle('lleno', pantallaLetra);
-  b.title = pantallaLetra ? t('cerrarLetra') : mini ? t('letraCompleta')
+  b.title = oculta ? t('mostrarLetraOculta') : pantallaLetra ? t('cerrarLetra') : mini ? t('letraCompleta')
     : est === 'fija' ? t('verLetraFija') : t('mostrarLetra');
+  b.setAttribute('aria-label', b.title);
   $('#franja').hidden = !mini;
   document.body.classList.toggle('letra-abierta', pantallaLetra);
   $('#pantalla-letra').hidden = !pantallaLetra;
@@ -1449,6 +1490,7 @@ function pintarAccionesLetra() {
   $('#btn-sync').classList.toggle('ajustado', !!(letra && letra.ajustada));
   $('#btn-sync').title = letra && letra.ajustada ? t('volverASincronizar') : t('sincronizarLetra');
   $('#btn-deshacer').hidden = !(letra && letra.ajustada) || sincronizando || ajustandoFino;
+  $('#btn-ocultar-letra').hidden = !(letra && (letra.estado === 'sinc' || letra.estado === 'fija')) || sincronizando || ajustandoFino;
   $('#panel-fino').hidden = !ajustandoFino;
   if (ajustandoFino) pintarValorFino();
   $('#btn-cancelar-sync').hidden = !sincronizando;
@@ -1620,8 +1662,11 @@ $('#btn-ahora').onclick = marcarAhora;
 
 // Un solo botón: sincronizada mini → completa → cerrada; fija (sin franja): completa ↔ cerrada
 $('#btn-letra').innerHTML = icono('letra', 24);
+$('#btn-ocultar-letra').innerHTML = icono('ocultar', 20);
+$('#btn-ocultar-letra').onclick = ocultarLetra;
 $('#btn-letra').onclick = () => {
   if (!letra) return;
+  if (letra.estado === 'oculta') return mostrarLetraOculta();
   const siguiente = letra.estado === 'sinc'
     ? { mini: 'completa', completa: 'cerrada', cerrada: 'mini' }[pantallaLetra ? 'completa' : modoLetra] || 'mini'
     : pantallaLetra ? 'cerrada' : 'completa';
@@ -1644,7 +1689,8 @@ function datosKaraoke() {
     letra: l ? { estado: l.estado, lineas: l.lineas, texto: l.texto } : null,
     tema: colores(tonoActual),
     vivo: !!(it && it.vivo),
-    textos: { fija: t('karaokeFija'), vivo: t('enVivo'), salir: t('salirKaraoke') },
+    letraOculta: !!(letra && letra.estado === 'oculta'),
+    textos: { fija: t('karaokeFija'), vivo: t('enVivo'), salir: t('salirKaraoke'), ocultar: t('ocultarLetraCorto'), mostrar: t('mostrarLetraCorto') },
   };
 }
 // El karaoke (en la tele o encima de la app) lo muestra Android con su propia pantalla

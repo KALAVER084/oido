@@ -482,6 +482,8 @@ class MainActivity : ComponentActivity() {
                         this@MainActivity,
                         alListo = { js("window.__karaokeListo && window.__karaokeListo()") },
                         alSalir = { js("window.__salirKaraoke && window.__salirKaraoke()") },
+                        // Solo se aceptan las órdenes conocidas (ocultar o mostrar la letra)
+                        alComando = { c -> if (c == "ocultar-letra" || c == "mostrar-letra") js("window.__karaokeComando && window.__karaokeComando('$c')") },
                     )
                     marco.addView(v.web, FrameLayout.LayoutParams(-1, -1))
                     karaokeLocal = v

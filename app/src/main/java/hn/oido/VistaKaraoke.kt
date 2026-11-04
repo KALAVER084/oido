@@ -14,7 +14,12 @@ import java.io.ByteArrayInputStream
  * y encima de la app cuando giras el teléfono con la letra abierta.
  */
 @SuppressLint("SetJavaScriptEnabled")
-class VistaKaraoke(contexto: Context, private val alListo: () -> Unit, private val alSalir: (() -> Unit)? = null) {
+class VistaKaraoke(
+    contexto: Context,
+    private val alListo: () -> Unit,
+    private val alSalir: (() -> Unit)? = null,
+    private val alComando: ((String) -> Unit)? = null,
+) {
     val web = WebView(contexto)
     private var listo = false
 
@@ -24,6 +29,7 @@ class VistaKaraoke(contexto: Context, private val alListo: () -> Unit, private v
         // La × del karaoke (solo en el teléfono; en la tele nadie toca la pantalla)
         if (alSalir != null) web.addJavascriptInterface(object {
             @JavascriptInterface fun salir() { web.post { alSalir?.invoke() } }
+            @JavascriptInterface fun comando(c: String) { web.post { alComando?.invoke(c) } }
         }, "OidoKaraoke")
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
