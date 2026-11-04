@@ -189,10 +189,10 @@
   @media (hover: hover) {
     .controles button:hover { color: var(--acento); }
     .controles #btn-letra:hover { color: var(--acento); }
-    .controles #btn-karaoke:hover { color: var(--acento); }
     .controles #btn-compartir-oido:hover { color: var(--acento); }
+    .controles #btn-karaoke:hover { color: var(--acento); }
   }
-  /* Botón de karaoke: a la izquierda del de letra (o en la esquina si no hay letra) */
+  /* Botón de karaoke (girar el teléfono): a la izquierda del de letra, o en la esquina si no hay letra */
   .controles #btn-karaoke {
     position: absolute; right: 3rem; top: 50%; transform: translateY(-50%);
     width: 2.8rem; height: 2.8rem; color: var(--suave);
@@ -447,8 +447,9 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
+    modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente',
     ocultarLetra: 'Ocultar letra de esta canción', mostrarLetraOculta: 'Mostrar la letra (oculta en esta canción)', letraOcultaAviso: 'Letra oculta en esta canción. Toca el botón de letra para volver a verla.', ocultarLetraCorto: 'Ocultar letra', mostrarLetraCorto: 'Mostrar letra',
-    modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente', salirKaraoke: 'Salir del karaoke',
+    salirKaraoke: 'Salir del karaoke',
     buscarEnYoutube: 'Buscar en YouTube', buscar: 'Buscar', cambiarTema: 'Cambiar tema', tema: 'Tema', tonoTema: 'Tono del tema', tono: 'Tono {n}',
     listo: 'Listo', dinamico: 'Dinámico', dinamicoTitulo: 'Los colores cambian solos, despacio', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartir Oído', anterior: 'Anterior', siguiente: 'Siguiente', reproducir: 'Reproducir', pausar: 'Pausar', posicion: 'Posición', letra: 'Letra',
@@ -485,8 +486,9 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
+    modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen',
     ocultarLetra: 'Hide lyrics for this song', mostrarLetraOculta: 'Show lyrics (hidden for this song)', letraOcultaAviso: 'Lyrics hidden for this song. Tap the lyrics button to show them again.', ocultarLetraCorto: 'Hide lyrics', mostrarLetraCorto: 'Show lyrics',
-    modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen', salirKaraoke: 'Exit karaoke',
+    salirKaraoke: 'Exit karaoke',
     buscarEnYoutube: 'Search YouTube', buscar: 'Search', cambiarTema: 'Change theme', tema: 'Theme', tonoTema: 'Theme hue', tono: 'Hue {n}',
     listo: 'Done', dinamico: 'Dynamic', dinamicoTitulo: 'Colors change on their own, slowly', idioma: 'Language', automatico: 'Automatic',
     compartirOido: 'Share Oído', anterior: 'Previous', siguiente: 'Next', reproducir: 'Play', pausar: 'Pause', posicion: 'Position', letra: 'Lyrics',
@@ -523,8 +525,9 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
+    modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente',
     ocultarLetra: 'Ocultar letra desta música', mostrarLetraOculta: 'Mostrar a letra (oculta nesta música)', letraOcultaAviso: 'Letra oculta nesta música. Toque no botão de letra para vê-la de novo.', ocultarLetraCorto: 'Ocultar letra', mostrarLetraCorto: 'Mostrar letra',
-    modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente', salirKaraoke: 'Sair do karaokê',
+    salirKaraoke: 'Sair do karaokê',
     buscarEnYoutube: 'Pesquisar no YouTube', buscar: 'Pesquisar', cambiarTema: 'Mudar tema', tema: 'Tema', tonoTema: 'Tom do tema', tono: 'Tom {n}',
     listo: 'Pronto', dinamico: 'Dinâmico', dinamicoTitulo: 'As cores mudam sozinhas, devagar', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartilhar o Oído', anterior: 'Anterior', siguiente: 'Próxima', reproducir: 'Tocar', pausar: 'Pausar', posicion: 'Posição', letra: 'Letra',
@@ -561,8 +564,9 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
+    modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance',
     ocultarLetra: 'Masquer les paroles de ce titre', mostrarLetraOculta: 'Afficher les paroles (masquées pour ce titre)', letraOcultaAviso: 'Paroles masquées pour ce titre. Touchez le bouton des paroles pour les revoir.', ocultarLetraCorto: 'Masquer les paroles', mostrarLetraCorto: 'Afficher les paroles',
-    modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance', salirKaraoke: 'Quitter le karaoké',
+    salirKaraoke: 'Quitter le karaoké',
     buscarEnYoutube: 'Rechercher sur YouTube', buscar: 'Rechercher', cambiarTema: 'Changer de thème', tema: 'Thème', tonoTema: 'Teinte du thème', tono: 'Teinte {n}',
     listo: 'OK', dinamico: 'Dynamique', dinamicoTitulo: 'Les couleurs changent toutes seules, lentement', idioma: 'Langue', automatico: 'Automatique',
     compartirOido: 'Partager Oído', anterior: 'Précédent', siguiente: 'Suivant', reproducir: 'Lire', pausar: 'Pause', posicion: 'Position', letra: 'Paroles',
@@ -599,8 +603,9 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
+    modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm',
     ocultarLetra: 'Liedtext für diesen Song ausblenden', mostrarLetraOculta: 'Liedtext anzeigen (für diesen Song ausgeblendet)', letraOcultaAviso: 'Liedtext für diesen Song ausgeblendet. Tippe auf die Liedtext-Taste, um ihn wieder zu sehen.', ocultarLetraCorto: 'Liedtext ausblenden', mostrarLetraCorto: 'Liedtext anzeigen',
-    modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm', salirKaraoke: 'Karaoke beenden',
+    salirKaraoke: 'Karaoke beenden',
     buscarEnYoutube: 'Auf YouTube suchen', buscar: 'Suchen', cambiarTema: 'Design ändern', tema: 'Design', tonoTema: 'Farbton des Designs', tono: 'Farbton {n}',
     listo: 'Fertig', dinamico: 'Dynamisch', dinamicoTitulo: 'Die Farben ändern sich langsam von selbst', idioma: 'Sprache', automatico: 'Automatisch',
     compartirOido: 'Oído teilen', anterior: 'Zurück', siguiente: 'Weiter', reproducir: 'Abspielen', pausar: 'Pause', posicion: 'Position', letra: 'Songtext',
@@ -637,8 +642,9 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
+    modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面',
     ocultarLetra: 'この曲の歌詞を隠す', mostrarLetraOculta: '歌詞を表示（この曲では非表示）', letraOcultaAviso: 'この曲の歌詞を非表示にしました。歌詞ボタンを押すと再び表示できます。', ocultarLetraCorto: '歌詞を隠す', mostrarLetraCorto: '歌詞を表示',
-    modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面', salirKaraoke: 'カラオケを終了',
+    salirKaraoke: 'カラオケを終了',
     buscarEnYoutube: 'YouTube を検索', buscar: '検索', cambiarTema: 'テーマを変更', tema: 'テーマ', tonoTema: 'テーマの色合い', tono: '色合い {n}',
     listo: '完了', dinamico: 'ダイナミック', dinamicoTitulo: '色がゆっくり自動で変わります', idioma: '言語', automatico: '自動',
     compartirOido: 'Oído を共有', anterior: '前へ', siguiente: '次へ', reproducir: '再生', pausar: '一時停止', posicion: '再生位置', letra: '歌詞',
@@ -707,10 +713,9 @@ function traducirPagina() {
 }
 
 const ICONOS = {
+  girar: '<rect x="7.5" y="3" width="9" height="15" rx="1.8"/><path d="M3 16.5a8.5 8.5 0 0 0 7 4.4M10 21l.3-2.6L7.8 18"/><path d="M21 7.5a8.5 8.5 0 0 0-7-4.4"/>',
   ocultar: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 20 20 4"/>',
   letraApagada: '<path d="M3 5h11M3 10h8M3 15h9M18 17V5l3 1.5" opacity=".55"/><circle cx="16" cy="17.5" r="2.5" fill="currentColor" stroke="none" opacity=".55"/><path d="M3 3l18 18"/>',
-  microfono: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
-  ondas: '<path d="M2 12c2-4 3.5-4 5 0s3 4 5 0 3.5-4 5 0 3 4 5 0"/><path d="M2 17c2-2.5 3.5-2.5 5 0s3 2.5 5 0 3.5-2.5 5 0 3 2.5 5 0" opacity=".5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -1703,7 +1708,7 @@ function karaokeCancion() {
   if (hayKaraoke()) enviarKaraoke(datosKaraoke());
 }
 // Teléfono en horizontal con algo sonando = modo karaoke, con o sin letra (solo Android)
-// Botón de karaoke: lo abre directo (el teléfono gira solo a horizontal).
+// Botón de karaoke (ícono de girar el teléfono): lo abre directo y gira la pantalla sola.
 // Tras salir con × o "atrás", girar no lo vuelve a abrir hasta que el teléfono vuelva a vertical.
 let karaokeForzado = false, salidaManual = false;
 function actualizarKaraokeLocal() {
@@ -1726,13 +1731,13 @@ window.__salirKaraoke = () => {
   if (esAndroid && window.OidoNativo.orientacionKaraoke) window.OidoNativo.orientacionKaraoke(false);
   actualizarKaraokeLocal();
 };
-// El botón cambia según la canción: micrófono con letra, ondas sin letra (o en vivo)
+// El botón de karaoke: siempre el mismo ícono (girar el teléfono), haya letra o no
 function pintarBotonKaraoke() {
   const b = $('#btn-karaoke');
   const it = cola && cola.items[cola.i];
-  const conLetra = !!(letra && (letra.estado === 'sinc' || letra.estado === 'fija'));
   b.hidden = !it || (esAndroid && pantallaExterna) || !window.oido.karaokeLocal;
-  b.innerHTML = icono(conLetra ? 'microfono' : 'ondas', 24);
+  if (!b.firstChild) b.innerHTML = icono('girar', 24);
+  const conLetra = !!(letra && (letra.estado === 'sinc' || letra.estado === 'fija'));
   const txt = conLetra ? t('modoKaraoke') : t('pantallaAmbiente');
   b.title = txt; b.setAttribute('aria-label', txt);
   b.classList.toggle('activo', karaokeLocalActivo);
