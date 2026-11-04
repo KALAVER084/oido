@@ -54,6 +54,14 @@
               transition: opacity .4s ease, color .4s ease, transform .4s ease; }
   #rollo .l.pasada { opacity: .22; }
   #rollo .l.actual { color: var(--acento); opacity: 1; font-weight: 700; transform: scale(1.32); }
+  /* Hilo de luz bajo el verso actual: avanza mientras se canta */
+  #rollo .tx { position: relative; display: inline-block; }
+  #hilo { position: absolute; left: 0; top: 100%; width: 100%; height: .42em; overflow: visible; pointer-events: none; }
+  #hilo path { fill: none; stroke: var(--acento); stroke-width: .055em; stroke-linecap: round; opacity: .85; }
+  #hilo circle { fill: var(--acento); filter: drop-shadow(0 0 .18em var(--acento)); }
+  /* Brillo: el verso nuevo entra con un resplandor que se apaga despacio */
+  #rollo .l.actual.entra { animation: entra 1.4s ease-out; }
+  @keyframes entra { 0% { text-shadow: 0 0 .45em var(--acento), 0 0 .12em var(--acento); } 100% { text-shadow: 0 1px 4px rgba(0, 0, 0, .6); } }
 
   /* Letra fija: texto completo que se desplaza con el avance de la canción */
   #fija { overflow: hidden; justify-content: center; }
@@ -136,9 +144,9 @@ function pintar() {
   const est = c.letra && c.letra.estado;
   if (est === 'sinc') { mostrar('lineas'); construirRollo(c.letra.lineas || []); }
   else if (est === 'fija') { mostrar('fija'); $('#fija-texto').textContent = c.letra.texto || ''; $('#fija').scrollTop = 0; }
-  else mostrar('solo');
-  // Cuando hay letra, el título va arriba; sin letra, va grande en el centro
-  document.querySelector('.top').style.visibility = est ? 'visible' : 'hidden';
+  else mostrar(c.vivo ? 'ninguna' : 'solo');       // en vivo: pantalla limpia, solo la animación
+  // Con letra (o en vivo) el nombre va en la esquina; sin letra, grande en el centro
+  document.querySelector('.top').style.visibility = est || c.vivo ? 'visible' : 'hidden';
   actual = -2;
   mover();
 }
@@ -166,17 +174,49 @@ function mover() {
     els[k].classList.toggle('pasada', k < i);
   }
   centrar(!primera);
-  if (!primera && i >= 0) Fondo.destello();        // verso nuevo: la animación reacciona
+  const el = els[i];
+  if (el) {
+    el.querySelector('.tx').appendChild(hilo);       // el hilo pasa al verso nuevo
+    if (!primera) { el.classList.remove('entra'); void el.offsetWidth; el.classList.add('entra'); }
+  } else hilo.remove();
 }
 
 // Arma todas las líneas una debajo de otra
+// ---------- Hilo de luz: una línea que ondula bajo el verso y avanza con la canción ----------
+const NS = 'http://www.w3.org/2000/svg';
+const hilo = document.createElementNS(NS, 'svg'); hilo.id = 'hilo';
+const hiloLinea = document.createElementNS(NS, 'path'), hiloPunta = document.createElementNS(NS, 'circle');
+hilo.append(hiloLinea, hiloPunta);
+let posLlego = 0, sonando = false;
+function dibujarHilo() {
+  requestAnimationFrame(dibujarHilo);
+  const l = cancion && cancion.letra;
+  if (!hilo.isConnected || !l || l.estado !== 'sinc' || actual < 0) return;
+  const ls = l.lineas || [], ini = ls[actual].t - 200;
+  const fin = actual + 1 < ls.length ? ls[actual + 1].t - 200 : Math.min(ini + 5000, dur || ini + 5000);
+  const ahora = pos + (sonando ? Math.min(1500, performance.now() - posLlego) : 0);
+  const p = Math.max(0, Math.min(1, (ahora - ini) / Math.max(300, fin - ini)));
+  const ancho = hilo.clientWidth || hilo.getBoundingClientRect().width, alto = hilo.clientHeight || 10, tt = performance.now() / 1000;
+  if (!ancho) return;
+  const onda = q => alto * .5 + Math.sin(q * 18 - tt * 2.2) * alto * .18 * Math.sin(q * Math.PI);
+  let d = '';
+  for (let k = 0, n = 48; k <= n; k++) { const q = k / n * p; d += (k ? 'L' : 'M') + (q * ancho).toFixed(1) + ' ' + onda(q).toFixed(1); }
+  hiloLinea.setAttribute('d', d);
+  hiloPunta.setAttribute('cx', (p * ancho).toFixed(1)); hiloPunta.setAttribute('cy', onda(p).toFixed(1));
+  hiloPunta.setAttribute('r', (alto * .28).toFixed(1));
+}
+requestAnimationFrame(dibujarHilo);
+
 function construirRollo(ls) {
   const r = $('#rollo');
   r.innerHTML = '';
   for (const l of ls) {
     const d = document.createElement('div');
     d.className = 'l';
-    d.textContent = l.texto || '♪';
+    const tx = document.createElement('span');
+    tx.className = 'tx';
+    tx.textContent = l.texto || '♪';
+    d.appendChild(tx);
     r.appendChild(d);
   }
 }
@@ -199,7 +239,7 @@ function recibir(m) {
   if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
   // Solo cambió el color (tema dinámico o elegido): se repinta sin reiniciar la letra
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
-  else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
+  else if (m.tipo === 'pos') { sonando = m.pos !== pos; pos = m.pos || 0; dur = m.dur || 0; posLlego = performance.now(); mover(); }
 }
 // ---------- Fondo animado: 23 animaciones de líneas que reaccionan a los versos ----------
 // Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
