@@ -80,16 +80,6 @@ class MainActivity : ComponentActivity() {
         }
         if (tv == null) js("window.__pantallaExterna && window.__pantallaExterna(false)")
         actualizarPantallaEncendida()
-        actualizarAnalizador()
-    }
-
-    /** El analizador de sonido solo trabaja mientras hay un karaoke abierto (tele o teléfono girado). */
-    private fun actualizarAnalizador() {
-        Analizador.oyente = if (tv != null || karaokeLocal != null) { bandas ->
-            val json = Analizador.json(bandas)
-            tv?.enviar(json)
-            karaokeLocal?.enviar(json)
-        } else null
     }
 
     /** Pantalla siempre encendida mientras se ve la letra completa o hay karaoke en la tele. */
@@ -265,7 +255,6 @@ class MainActivity : ComponentActivity() {
         gestorPantallas?.unregisterDisplayListener(oyentePantallas)
         tv?.let { runCatching { it.dismiss() } }
         tv = null
-        actualizarAnalizador()
         main.removeCallbacks(reloj)
         controller?.removeListener(oyente)
         futuro?.let { MediaController.releaseFuture(it) }
@@ -277,7 +266,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         karaokeLocal?.destruir()
         karaokeLocal = null
-        Analizador.oyente = null
         paginaLista = false
         web.destroy()
         trabajo.shutdown()
@@ -497,7 +485,6 @@ class MainActivity : ComponentActivity() {
                     karaokeLocal?.let { marco.removeView(it.web); it.destruir() }
                     karaokeLocal = null
                 }
-                actualizarAnalizador()
             }
         }
 

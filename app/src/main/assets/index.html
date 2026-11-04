@@ -64,9 +64,6 @@
   #btn-dinamico.activo .arcoiris { animation: girar 6s linear infinite; }
   @keyframes girar { to { transform: rotate(360deg); } }
   .fila-idioma { display: flex; align-items: center; gap: .5rem; color: var(--suave); font-size: .9rem; }
-  .sinc-boton { width: 2rem; height: 2rem; border-radius: 50%; padding: 0; font-size: 1.1rem; line-height: 1; }
-  #sinc-valor { min-width: 4.2rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--texto); }
-  .sinc-ayuda { margin: .2rem 0 0; font-size: .8rem; color: var(--suave); }
   #idioma { font: inherit; color: var(--texto); background: var(--fondo); border: 1px solid var(--linea); border-radius: 8px; padding: .3rem .5rem; }
   #btn-compartir-app { display: flex; align-items: center; gap: .45rem; color: var(--acento); padding: .3rem 0; }
   .fila-tema { flex-wrap: wrap; gap: .6rem; }
@@ -221,13 +218,6 @@
       <div class="fila-tema">
         <button type="button" id="btn-compartir-app"></button>
         <label class="fila-idioma"><span data-t="idioma">Idioma</span> <select id="idioma"></select></label>
-        <div class="fila-idioma fila-sinc">
-          <span data-t="sincKaraoke">Sincronía del karaoke</span>
-          <button type="button" id="sinc-menos" class="sinc-boton" data-t-aria="sincMenos" aria-label="Más temprano">−</button>
-          <span id="sinc-valor" aria-live="polite">0 ms</span>
-          <button type="button" id="sinc-mas" class="sinc-boton" data-t-aria="sincMas" aria-label="Más tarde">+</button>
-        </div>
-        <p class="sinc-ayuda" data-t="sincAyuda">Si las líneas van tarde, bájalo; si van antes, súbelo.</p>
         <button type="button" id="tema-listo" data-t="listo">Listo</button>
       </div>
     </div>
@@ -341,39 +331,9 @@ if (window.OidoNativo) {
     // Un <video> invisible: reproduce audio normal y también en vivos (que traen imagen)
     const audio = document.createElement('video');
     audio.style.display = 'none';
-    audio.crossOrigin = 'anonymous';           // permite analizar el sonido para el karaoke
     document.body.appendChild(audio);
     let hls = null, vivo = false, promesaHls = null;
 
-    // Analizador de sonido para el karaoke: toma una COPIA del audio (si fallara, la música suena igual)
-    let actx = null, analizador = null, fuente = null, datosF = null, maximo = -30;
-    const BANDAS = 16;
-    function conectarAnalisis() {
-      try {
-        if (!actx) { actx = new AudioContext(); analizador = actx.createAnalyser(); analizador.fftSize = 1024; analizador.smoothingTimeConstant = 0; datosF = new Float32Array(analizador.frequencyBinCount); }
-        if (actx.state === 'suspended') actx.resume();
-        const flujo = audio.captureStream ? audio.captureStream() : null;
-        if (!flujo || !flujo.getAudioTracks().length) return;
-        if (fuente) fuente.disconnect();
-        fuente = actx.createMediaStreamSource(flujo);
-        fuente.connect(analizador);                // solo al analizador: lo que se oye sigue saliendo del reproductor
-      } catch (e) { fuente = null; }
-    }
-    audio.addEventListener('playing', () => { if (actx) conectarAnalisis(); });
-    window.oido.bandas = () => {
-      if (!actx) conectarAnalisis();
-      if (!fuente || audio.paused) return null;
-      analizador.getFloatFrequencyData(datosF);
-      const sr = actx.sampleRate, hz = sr / analizador.fftSize, alto = Math.min(16000, sr / 2), b = [];
-      let mayor = -120;
-      for (let k = 0; k < BANDAS; k++) {
-        const de = Math.max(1, Math.floor(40 * Math.pow(alto / 40, k / BANDAS) / hz)), a = Math.max(de + 1, Math.floor(40 * Math.pow(alto / 40, (k + 1) / BANDAS) / hz));
-        let e = 0; for (let j = de; j < a && j < datosF.length; j++) e += Math.pow(10, datosF[j] / 10);
-        const db = 10 * Math.log10(e / (a - de) + 1e-10); b.push(db); if (db > mayor) mayor = db;
-      }
-      maximo = Math.max(mayor, maximo - .15);      // se adapta al volumen de cada canción
-      return b.map(db => Math.max(0, Math.min(1, (db - (maximo - 42)) / 42)));
-    };
     const soltarHls = () => { if (hls) { hls.destroy(); hls = null; } };
     // hls.js solo se carga la primera vez que suena un en vivo
     const cargarHls = () => promesaHls ??= new Promise((res, rej) => {
@@ -475,7 +435,6 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
-    sincKaraoke: 'Sincronía del karaoke', sincAyuda: 'Si las líneas van tarde, bájalo; si van antes, súbelo.', sincMenos: 'Más temprano', sincMas: 'Más tarde',
     buscarEnYoutube: 'Buscar en YouTube', buscar: 'Buscar', cambiarTema: 'Cambiar tema', tema: 'Tema', tonoTema: 'Tono del tema', tono: 'Tono {n}',
     listo: 'Listo', dinamico: 'Dinámico', dinamicoTitulo: 'Los colores cambian solos, despacio', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartir Oído', anterior: 'Anterior', siguiente: 'Siguiente', reproducir: 'Reproducir', pausar: 'Pausar', posicion: 'Posición', letra: 'Letra',
@@ -512,7 +471,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
-    sincKaraoke: 'Karaoke sync', sincAyuda: 'If the lines lag behind, lower it; if they run ahead, raise it.', sincMenos: 'Earlier', sincMas: 'Later',
     buscarEnYoutube: 'Search YouTube', buscar: 'Search', cambiarTema: 'Change theme', tema: 'Theme', tonoTema: 'Theme hue', tono: 'Hue {n}',
     listo: 'Done', dinamico: 'Dynamic', dinamicoTitulo: 'Colors change on their own, slowly', idioma: 'Language', automatico: 'Automatic',
     compartirOido: 'Share Oído', anterior: 'Previous', siguiente: 'Next', reproducir: 'Play', pausar: 'Pause', posicion: 'Position', letra: 'Lyrics',
@@ -549,7 +507,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
-    sincKaraoke: 'Sincronia do karaokê', sincAyuda: 'Se as linhas atrasarem, diminua; se adiantarem, aumente.', sincMenos: 'Mais cedo', sincMas: 'Mais tarde',
     buscarEnYoutube: 'Pesquisar no YouTube', buscar: 'Pesquisar', cambiarTema: 'Mudar tema', tema: 'Tema', tonoTema: 'Tom do tema', tono: 'Tom {n}',
     listo: 'Pronto', dinamico: 'Dinâmico', dinamicoTitulo: 'As cores mudam sozinhas, devagar', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartilhar o Oído', anterior: 'Anterior', siguiente: 'Próxima', reproducir: 'Tocar', pausar: 'Pausar', posicion: 'Posição', letra: 'Letra',
@@ -586,7 +543,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
-    sincKaraoke: 'Synchro du karaoké', sincAyuda: 'Si les lignes sont en retard, baissez ; si elles sont en avance, montez.', sincMenos: 'Plus tôt', sincMas: 'Plus tard',
     buscarEnYoutube: 'Rechercher sur YouTube', buscar: 'Rechercher', cambiarTema: 'Changer de thème', tema: 'Thème', tonoTema: 'Teinte du thème', tono: 'Teinte {n}',
     listo: 'OK', dinamico: 'Dynamique', dinamicoTitulo: 'Les couleurs changent toutes seules, lentement', idioma: 'Langue', automatico: 'Automatique',
     compartirOido: 'Partager Oído', anterior: 'Précédent', siguiente: 'Suivant', reproducir: 'Lire', pausar: 'Pause', posicion: 'Position', letra: 'Paroles',
@@ -623,7 +579,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
-    sincKaraoke: 'Karaoke-Synchronisierung', sincAyuda: 'Wenn die Linien hinterherhinken, verringern; wenn sie zu früh sind, erhöhen.', sincMenos: 'Früher', sincMas: 'Später',
     buscarEnYoutube: 'Auf YouTube suchen', buscar: 'Suchen', cambiarTema: 'Design ändern', tema: 'Design', tonoTema: 'Farbton des Designs', tono: 'Farbton {n}',
     listo: 'Fertig', dinamico: 'Dynamisch', dinamicoTitulo: 'Die Farben ändern sich langsam von selbst', idioma: 'Sprache', automatico: 'Automatisch',
     compartirOido: 'Oído teilen', anterior: 'Zurück', siguiente: 'Weiter', reproducir: 'Abspielen', pausar: 'Pause', posicion: 'Position', letra: 'Songtext',
@@ -660,7 +615,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
-    sincKaraoke: 'カラオケの同期', sincAyuda: '線が遅れるときは下げ、早いときは上げてください。', sincMenos: '早く', sincMas: '遅く',
     buscarEnYoutube: 'YouTube を検索', buscar: '検索', cambiarTema: 'テーマを変更', tema: 'テーマ', tonoTema: 'テーマの色合い', tono: '色合い {n}',
     listo: '完了', dinamico: 'ダイナミック', dinamicoTitulo: '色がゆっくり自動で変わります', idioma: '言語', automatico: '自動',
     compartirOido: 'Oído を共有', anterior: '前へ', siguiente: '次へ', reproducir: '再生', pausar: '一時停止', posicion: '再生位置', letra: '歌詞',
@@ -1670,25 +1624,8 @@ function datosKaraoke() {
     letra: l ? { estado: l.estado, lineas: l.lineas, texto: l.texto } : null,
     tema: colores(tonoActual),
     textos: { fija: t('karaokeFija') },
-    sinc: ajusteSinc,          // ajuste del usuario en milisegundos (negativo = antes)
-    sincBase: SINC_BASE,       // espera propia del aparato
   };
 }
-// Sincronía del karaoke con la música (se guarda en cada aparato)
-// En Android el analizador recibe el sonido antes de que suene, por eso espera un poco por defecto.
-const SINC_BASE = esAndroid ? 120 : 0;
-let ajusteSinc = 0;
-try { ajusteSinc = Math.max(-300, Math.min(300, +localStorage.getItem('oido-sinc') || 0)); } catch {}
-function mostrarSinc() { $('#sinc-valor').textContent = (ajusteSinc > 0 ? '+' : ajusteSinc < 0 ? '−' : '') + Math.abs(ajusteSinc) + ' ms'; }
-function cambiarSinc(d) {
-  ajusteSinc = Math.max(-300, Math.min(300, ajusteSinc + d));
-  try { localStorage.setItem('oido-sinc', ajusteSinc); } catch {}
-  mostrarSinc(); karaokeCancion();
-}
-$('#sinc-menos').onclick = () => cambiarSinc(-20);
-$('#sinc-mas').onclick = () => cambiarSinc(20);
-mostrarSinc();
-
 // El karaoke (en la tele o encima de la app) lo muestra Android con su propia pantalla
 let karaokeLocalActivo = false;
 const hayKaraoke = () => !!window.oido.karaoke && (pantallaExterna || karaokeLocalActivo);
@@ -1711,12 +1648,6 @@ window.__karaokeListo = () => enviarKaraoke(datosKaraoke());
 
 // PC: F11 abre o cierra el karaoke (segundo monitor si hay; si no, la misma pantalla)
 if (!esAndroid && window.oido.alKaraoke) {
-  // Mientras el karaoke está abierto, se le manda el sonido (16 bandas, ~30 veces por segundo)
-  setInterval(() => {
-    if (!karaokeLocalActivo || !window.oido.bandas) return;
-    const b = window.oido.bandas();
-    if (b) window.oido.karaoke(JSON.stringify({ tipo: 'audio', b: b.map(v => Math.round(v * 100) / 100) }));
-  }, 33);
   document.addEventListener('keydown', e => {
     if (e.key !== 'F11') return;
     e.preventDefault();

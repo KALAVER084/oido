@@ -148,6 +148,7 @@ function mover() {
     els[k].classList.toggle('pasada', k < i);
   }
   centrar(!primera);
+  if (!primera && i >= 0) Fondo.destello();        // verso nuevo: la animación reacciona
 }
 
 // Arma todas las líneas una debajo de otra
@@ -177,105 +178,35 @@ window.addEventListener('resize', () => centrar(false));
 
 function recibir(m) {
   if (!m || typeof m !== 'object') return;
-  if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); Fondo.sincro(m.sincBase, m.sinc); }
-  else if (m.tipo === 'audio') Fondo.audio(m.b);                  // sonido: 16 bandas, ~30 veces por segundo
+  if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
   // Solo cambió el color (tema dinámico o elegido): se repinta sin reiniciar la letra
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
 }
-// ---------- Fondo animado: 23 animaciones de líneas que reaccionan al sonido ----------
-// El sonido llega como 16 bandas (0 = graves … 15 = agudos), unas 30 veces por segundo, con Fondo.audio(b).
-// Los graves mueven el centro de las líneas, los agudos los bordes, el volumen el brillo y cada golpe manda una ola.
+// ---------- Fondo animado: 23 animaciones de líneas que reaccionan a los versos ----------
+// Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
   let W = 0, H = 0, u = 1, HUE = 175, FON = '#0e1615', ef = -1, clave = null, t = 0, ultimo = 0, Z = {};
   const c = (h, s, l, a = 1) => `hsla(${((h % 360) + 360) % 360} ${s}% ${l}% / ${a})`;
 
-  // ===== Sonido: lo reconocible de la canción =====
-  // Las 16 bandas se agrupan en 4 grupos musicales, comparados con el promedio de la propia canción:
-  //   golpe (bombo), cuerpo (bajo y guitarras), voz (la melodía) y brillo (platillos).
-  // Las olas caen al compás: se aprende el tempo de la canción y se ignoran los sonidos sueltos.
-  // El "nivel" compara la energía actual con la de toda la canción: la estrofa se calma y el coro se enciende.
-  const Bs = new Float32Array(16), crudo = new Float32Array(16);
-  const G = { golpe: 0, cuerpo: 0, voz: 0, brillo: 0 }, prom = { golpe: .3, cuerpo: .3, voz: .3, brillo: .3 };
-  const RANGOS = { golpe: [0, 2], cuerpo: [3, 5], voz: [6, 11], brillo: [12, 15] };
-  let vol = 0, ultAudio = -10, olas = [], golpe = false;
-  // Sincronía: el sonido espera en una fila antes de usarse (base del aparato + ajuste del usuario).
-  // Si el ajuste pide ir antes de lo que permite la fila, las olas se adelantan usando el tempo.
-  let filaAudio = [], sincBase = 0, sincAjuste = 0;
-  // Batería: el bombo (pulso) se exagera como un latido; la caja (contratiempo) es un destello rápido
-  let patada = 0, caja = 0, nivel = .35, cajaFlujoProm = .02, ultCaja = 0, ultBombo = 0;
-  // Zonas de la batería (suavizadas un poco para que el ruido no parezca golpe)
-  const zona = { sub: [0, 1], cuerpo: [3, 5], chasquido: [10, 12], aire: [13, 15] }, zS = {}, zPrev = {}, zSube = {};
-  let chasquidoNormal = .3;
-  for (const n in zona) { zS[n] = 0; zPrev[n] = 0; zSube[n] = 0; }
-  let energia = .3, energiaLarga = .3, golpePrev = 0, golpeSuave = 0, golpeNormal = .3, flujoProm = .02, ultOnset = 0, intervalos = [], tiempos = [], periodo = 0, proxBeat = 0;
+  // ===== Ritmo propio + versos =====
+  // Las líneas respiran solas, suave y continuo. Con letra sincronizada, cada verso nuevo
+  // manda una ola y un latido (y cada animación hace su propia reacción: gota, ráfaga, eco…).
+  const Bs = new Float32Array(16);
+  const G = { golpe: 0, cuerpo: 0, voz: 0, brillo: 0 };
+  let vol = .35, nivel = .35, olas = [], golpe = false, patada = 0, caja = 0, verso = false;
   function sonido(dt) {
-    const ahora = performance.now(), espera = Math.max(0, sincBase + sincAjuste);
-    while (filaAudio.length && filaAudio[0].llega <= ahora - espera) {
-      const b = filaAudio.shift().b;
-      for (let k = 0; k < 16; k++) crudo[k] = b[k];
-      ultAudio = t;
-    }
-    if (filaAudio.length > 90) filaAudio.splice(0, filaAudio.length - 90);
-    const anticipo = .06 + Math.min(.3, Math.max(0, -(sincBase + sincAjuste)) / 1000);   // las olas llegan justo en el golpe
-    const sinAudio = t - ultAudio > .5;
-    const grupo = n => { const [a, b] = RANGOS[n]; let v = 0; for (let k = a; k <= b; k++) v += crudo[k]; return v / (b - a + 1); };
-    for (const n in G) {
-      const c0 = sinAudio ? .3 + .1 * Math.sin(t * .6 + n.length) : grupo(n);
-      prom[n] += (c0 - prom[n]) * Math.min(1, dt * .15);                    // promedio de la canción (~7 s)
-      const rel = sinAudio ? .25 + .1 * Math.sin(t * .5 + n.length) : Math.min(1, Math.max(0, c0 / (prom[n] + .05) - .6) / 1.6);
-      G[n] += (rel - G[n]) * Math.min(1, dt * (rel > G[n] ? 28 : 2.5));      // sube al instante, baja despacio
-    }
-    // Las 16 posiciones que usan las animaciones salen de los 4 grupos
-    for (let k = 0; k < 16; k++) Bs[k] = k <= 2 ? Math.min(1, G.golpe * .5 + patada * .9) : k <= 5 ? G.cuerpo * .8 + G.golpe * .2 : k <= 11 ? Math.min(1, G.voz + caja * .25) : Math.min(1, G.brillo * .7 + G.voz * .3 + caja * .5);
-    // Nivel de la sección: energía de ahora contra la de toda la canción
-    const e = sinAudio ? .3 : (grupo('golpe') + grupo('voz')) / 2;
-    energia += (e - energia) * Math.min(1, dt * .6);
-    energiaLarga += (energia - energiaLarga) * Math.min(1, dt * .05);          // ~20 s
-    const nivelObj = sinAudio ? .35 : Math.max(0, Math.min(1, .5 + (energia - energiaLarga) * 3));
-    nivel += (nivelObj - nivel) * Math.min(1, dt * 2);
-    // Tempo: los golpes de bombo enseñan el ritmo; las olas caen en el compás
-    golpe = false;
-    if (!sinAudio) {
-      // Cuánto sube cada zona en este instante
-      for (const n in zona) { const [a, b] = zona[n]; let v = 0; for (let k = a; k <= b; k++) v += crudo[k]; zS[n] += (v / (b - a + 1) - zS[n]) * Math.min(1, dt * 25); zSube[n] = Math.max(0, zS[n] - zPrev[n]); zPrev[n] = zS[n]; }
-      // Graves un poco suavizados (para que el ruido no parezca golpe) y comparados con su nivel normal
-      golpeSuave += (grupo('golpe') - golpeSuave) * Math.min(1, dt * 25);
-      const g = golpeSuave, flujo = Math.max(0, g - golpePrev); golpePrev = g;
-      golpeNormal += (g - golpeNormal) * Math.min(1, dt * .8);
-      flujoProm += (flujo - flujoProm) * Math.min(1, dt * 2);
-      // Bombo: sube sobre todo lo más grave (más que el cuerpo medio, que es de la caja)
-      if (flujo > Math.max(.05, flujoProm * 2.5) && g > golpeNormal * 1.25 + .05 && zSube.sub > zSube.cuerpo * .9 && t - ultOnset > .25) {
-        const iv = t - ultOnset;
-        if (ultOnset && iv > .28 && iv < 1.3) { intervalos.push(iv); if (intervalos.length > 16) intervalos.shift(); }
-        else if (iv >= 1.3) { intervalos = []; tiempos = []; }                // pausa larga: se vuelve a aprender
-        ultOnset = t;
-        tiempos.push(t); if (tiempos.length > 17) tiempos.shift();
-        if (intervalos.length > 3) {
-          // Tempo con todo el tramo: (último − primero) ÷ cuántos golpes caben (tolera golpes perdidos o detectados tarde)
-          const o = [...intervalos].sort((a, b) => a - b), m = o[Math.floor(o.length / 2)], tramo = tiempos[tiempos.length - 1] - tiempos[0];
-          periodo = tramo / Math.max(1, Math.round(tramo / m));
-        }
-        ultBombo = t;
-        if (periodo) {                                                        // cada golpe real corrige el compás
-          const previo = proxBeat - periodo, err = Math.abs(t - previo) < Math.abs(t - proxBeat) ? t - previo : t - proxBeat;
-          if (Math.abs(err) < periodo * .25) proxBeat += err * .5;
-        } else golpe = true;                                                  // mientras aprende el ritmo
-      }
-      if (periodo && t >= proxBeat - anticipo) { golpe = true; proxBeat += periodo; if (proxBeat - anticipo < t) proxBeat = t + periodo; }
-      // Caja: chasquido (1,7–5 kHz) Y cuerpo (150–250 Hz) a la vez; los platillos solo tienen agudos
-      const fc = zSube.chasquido;
-      cajaFlujoProm += (fc - cajaFlujoProm) * Math.min(1, dt * 2);
-      chasquidoNormal += (zS.chasquido - chasquidoNormal) * Math.min(1, dt * .8);
-      if (fc > Math.max(.05, cajaFlujoProm * 3) && zSube.cuerpo > .025 && fc > zSube.aire * .8 &&
-          zS.chasquido > chasquidoNormal * 1.2 + .03 && t - ultCaja > .18 &&
-          (t - ultBombo > .07 || fc > Math.max(.08, cajaFlujoProm * 4))) { ultCaja = t; caja = 1; }   // junto al bombo, solo si el chasquido es claro
-    } else { periodo = 0; intervalos = []; tiempos = []; }
+    G.golpe = .26 + .1 * Math.sin(t * .5);
+    G.cuerpo = .24 + .08 * Math.sin(t * .31 + 1);
+    G.voz = .3 + .1 * Math.sin(t * .37 + 2);
+    G.brillo = .2 + .06 * Math.sin(t * .43 + 3);
+    nivel = .38 + .06 * Math.sin(t * .2);
+    golpe = verso; verso = false;
     if (golpe) { olas.push(0); patada = 1; }
-    patada = Math.max(0, patada - dt * 5);             // latido seco: sube de golpe y se apaga en ~0,2 s
-    caja = Math.max(0, caja - dt * 7);                 // destello aún más corto
-    vol = Math.min(1, nivel + caja * .35);             // la caja ilumina las líneas un instante
+    patada = Math.max(0, patada - dt * 2.5);           // el latido del verso se apaga en ~0,4 s
+    for (let k = 0; k < 16; k++) Bs[k] = k <= 2 ? Math.min(1, G.golpe + patada * .6) : k <= 5 ? G.cuerpo : k <= 11 ? G.voz : G.brillo;
+    vol = Math.min(1, nivel + patada * .25);
     olas = olas.map(o => o + dt * .9).filter(o => o < 1.6);
   }
   const banda = q => { const d = Math.abs(q - .5) * 2; return Math.min(1.3, (G.golpe * .45 + patada * .85) * (1 - d) + G.voz * Math.exp(-Math.pow((d - .35) * 3, 2)) * .7 + (G.brillo * .25 + caja * .45) * d + nivel * .12); };
@@ -284,6 +215,8 @@ const Fondo = (() => {
   const centro = (q, a = 3.2) => Math.exp(-Math.pow((q - .5) * a, 2));
   const trazo = (w, col) => { x.strokeStyle = col; x.lineWidth = Math.max(1, w); x.stroke(); };
   const tapar = () => { x.fillStyle = FON; x.fill(); };
+  // Impulso del verso para las animaciones que no usan olas (sube al instante y baja en ~1,2 s)
+  const impulso = dt => { if (golpe) Z.p = 1; Z.p = Math.max(0, (Z.p || 0) - dt * .8); return Z.p * Z.p * (3 - 2 * Z.p); };
   // Líneas apiladas que se tapan unas a otras (las de adelante tapan a las de atrás)
   function apiladas(N, top, alto, altura, estilo) {
     const esp = alto / N;
@@ -358,11 +291,11 @@ const Fondo = (() => {
       } },
     { // 9. Papel: capas recortadas
       cuadro() { apiladas(14, H * .2, H * .72, (q, i, fr, esp) => Math.max(0, ruido(q, i) * .8 + .7) * (.35 + centro(q, 1.6) * .65) * (.5 + banda(q) * 1.3 + ola(fr)) * esp * 1.6, (i, fr) => { x.fillStyle = c(HUE + fr * 40, 32, 10 + fr * 16 + vol * 6, 1); x.fill(); trazo(u * .6, c(HUE + fr * 40, 40, 30 + fr * 20, .6)); }); } },
-    { // 10. Espiral: una sola línea que gira
+    { // 10. Espiral: una sola línea que gira; con cada verso, un pulso la recorre hacia afuera
       cuadro() {
         const cx = W / 2, cy = H / 2, vueltas = 9, paso = (Math.min(W, H) * .46) / (vueltas * Math.PI * 2);
         x.beginPath();
-        for (let a = 0; a < vueltas * Math.PI * 2; a += .04) { const q = (a % (Math.PI * 2)) / (Math.PI * 2), k = Math.floor(a / (Math.PI * 2)), r = 8 * u + a * paso + Math.max(0, ruido(q, k) + .4) * (3 + banda(q) * 9) * u, ang = a + t * .15; const X2 = cx + Math.cos(ang) * r, Y2 = cy + Math.sin(ang) * r * .82; a ? x.lineTo(X2, Y2) : x.moveTo(X2, Y2); }
+        for (let a = 0; a < vueltas * Math.PI * 2; a += .04) { const q = (a % (Math.PI * 2)) / (Math.PI * 2), k = Math.floor(a / (Math.PI * 2)), r = 8 * u + a * paso + Math.max(0, ruido(q, k) + .4) * (3 + banda(q) * 9 + ola(a / (vueltas * Math.PI * 2)) * 7) * u, ang = a + t * .15; const X2 = cx + Math.cos(ang) * r, Y2 = cy + Math.sin(ang) * r * .82; a ? x.lineTo(X2, Y2) : x.moveTo(X2, Y2); }
         trazo(u, c(HUE + 20, 50, 55 + vol * 20, .45 + vol * .3));
       } },
     { // 11. Neón
@@ -397,11 +330,13 @@ const Fondo = (() => {
           x.stroke();
         }
       } },
-    { // 14. Cuerdas: cada cuerda es una banda del sonido
+    { // 14. Cuerdas: vibran solas; con cada verso se pulsan todas, una tras otra (arpegio)
+      crear() { Z.pulso = -10; },
       cuadro() {
+        if (golpe) Z.pulso = t;
         const N = 14, top = H * .18, esp = H * .64 / (N - 1);
         for (let i = 0; i < N; i++) {
-          const a = Bs[Math.round(i / (N - 1) * 15)], y0 = top + i * esp;
+          const dp = t - (Z.pulso + i * .06), a = Math.min(1, Bs[Math.round(i / (N - 1) * 15)] * .7 + (dp > 0 ? Math.exp(-dp * 1.6) : 0)), y0 = top + i * esp;
           x.beginPath();
           for (let px = 0; px <= W; px += 3 * u) { const q = px / W, d = Math.sin(Math.PI * q * (1 + i % 4)) * Math.sin(t * (8 + i * 2)) * a * esp * .9 + Math.sin(q * 20 + t + i) * .5 * u; px ? x.lineTo(px, y0 + d) : x.moveTo(px, y0 + d); }
           trazo(u * (.6 + (N - i) / N * 1.1), c(HUE + i * 4, 50, 40 + a * 40, .25 + a * .65));
@@ -472,12 +407,12 @@ const Fondo = (() => {
           if (abierto) x.stroke();
         }
       } },
-    { // 21. Osciloscopio: una sola línea que dibuja figuras con el sonido
-      cuadro() {
-        const cx = W / 2, cy = H / 2, R = H * .32 * (.6 + vol * .8), fb = 2 + Math.sin(t * .07) * .5, ph = t * .4;
+    { // 21. Osciloscopio: una sola línea que dibuja figuras; con cada verso se expande y se ilumina
+      cuadro(dt) {
+        const im = impulso(dt), cx = W / 2, cy = H / 2, R = H * .32 * (.6 + vol * .8) * (1 + im * .3), fb = 2 + Math.sin(t * .07) * .5, ph = t * .4;
         x.beginPath();
         for (let k = 0; k <= 1200; k++) { const s = k / 1200 * Math.PI * 2, j = Bs[(k >> 4) % 16] * .12, px = cx + Math.sin(3 * s + ph) * R * 1.45 * (1 + j), py = cy + Math.sin(fb * s) * R * (1 + j); k ? x.lineTo(px, py) : x.moveTo(px, py); }
-        trazo(u * 5, c(HUE + 20, 80, 55, .08 + vol * .08)); trazo(u * 1.1, c(HUE + 20, 70, 70, .45 + vol * .4));
+        trazo(u * 5, c(HUE + 20, 80, 55, .08 + vol * .08 + im * .12)); trazo(u * 1.1, c(HUE + 20, 70, 70 + im * 12, .45 + vol * .4));
       } },
     { // 22. Ecos: la onda deja copias que suben y se apagan; las de los golpes, más brillantes
       crear() { Z.ecos = []; Z.reloj = 0; },
@@ -493,11 +428,11 @@ const Fondo = (() => {
         }
         const viva = onda(); x.beginPath(); for (let j = 0; j <= 120; j++) { const px = j / 120 * W, y = base - viva[j] * H * .24; j ? x.lineTo(px, y) : x.moveTo(px, y); } trazo(u * 1.4, c(HUE + 10, 65, 70, .95));
       } },
-    { // 23. Fibras: un haz que se abre con la música
-      cuadro() {
-        const N = 60, cy = H / 2;
+    { // 23. Fibras: un haz que respira; con cada verso se abre de par en par
+      cuadro(dt) {
+        const N = 60, cy = H / 2, im = impulso(dt);
         for (let i = 0; i < N; i++) {
-          const s = (i / (N - 1) - .5) * 2, k = Math.round(Math.abs(s) * 15), abre = (.25 + Bs[k] * .9 + vol * .4) * H * .36;
+          const s = (i / (N - 1) - .5) * 2, k = Math.round(Math.abs(s) * 15), abre = (.25 + Bs[k] * .9 + vol * .4 + im * .7) * H * .36;
           x.beginPath();
           for (let px = 0; px <= W; px += 5 * u) { const q = px / W, env = Math.sin(q * Math.PI), y = cy + s * abre * env + Math.sin(q * 6 + t * .8 + i * .15) * 12 * u * env; px ? x.lineTo(px, y) : x.moveTo(px, y); }
           trazo(u * .7, c(HUE + s * 30, 55, 45 + Bs[k] * 30, .18 + Bs[k] * .4));
@@ -552,13 +487,12 @@ const Fondo = (() => {
       if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): misma animación
       clave = k;
       let n; do { n = Math.floor(Math.random() * EF.length); } while (n === ef);
-      ef = n; Z = {}; olas = []; periodo = 0; intervalos = []; tiempos = []; energiaLarga = energia;
+      ef = n; Z = {}; olas = []; patada = 0;
       if (EF[ef].crear) EF[ef].crear();
     },
     // 16 bandas del sonido que está sonando (0..1)
-    audio(b) { if (!b || !b.length) return; filaAudio.push({ llega: performance.now(), b: Array.from({ length: 16 }, (_, k) => Math.max(0, Math.min(1, +b[k] || 0))) }); },
-    // Sincronía en milisegundos: base del aparato y ajuste del usuario (negativo = antes)
-    sincro(base, ajuste) { sincBase = +base || 0; sincAjuste = +ajuste || 0; },
+    // Verso nuevo de la letra sincronizada: cada animación hace su reacción
+    destello() { verso = true; },
     get estilo() { return ef; },
     total: () => EF.length,
   };
