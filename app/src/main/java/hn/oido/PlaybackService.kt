@@ -1,6 +1,7 @@
 package hn.oido
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.annotation.OptIn
@@ -14,7 +15,11 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -45,7 +50,17 @@ class PlaybackService : MediaSessionService() {
         // Cada canción entra como "oido://audio/ID"; justo al cargarla se pide su URL real.
         val resolvedor = ResolvingDataSource.Factory(http) { spec -> resolver(spec) }
 
-        val player = ExoPlayer.Builder(this)
+        // Una copia del audio pasa por el analizador (para que el karaoke se mueva con la música)
+        val conAnalizador = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+                DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessors(arrayOf(TeeAudioProcessor(Analizador)))
+                    .build()
+        }
+
+        val player = ExoPlayer.Builder(this, conAnalizador)
             .setMediaSourceFactory(DefaultMediaSourceFactory(resolvedor))
             .setAudioAttributes(
                 AudioAttributes.Builder()

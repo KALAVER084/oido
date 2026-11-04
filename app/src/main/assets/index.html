@@ -331,8 +331,39 @@ if (window.OidoNativo) {
     // Un <video> invisible: reproduce audio normal y también en vivos (que traen imagen)
     const audio = document.createElement('video');
     audio.style.display = 'none';
+    audio.crossOrigin = 'anonymous';           // permite analizar el sonido para el karaoke
     document.body.appendChild(audio);
     let hls = null, vivo = false, promesaHls = null;
+
+    // Analizador de sonido para el karaoke: toma una COPIA del audio (si fallara, la música suena igual)
+    let actx = null, analizador = null, fuente = null, datosF = null, maximo = -30;
+    const BANDAS = 16;
+    function conectarAnalisis() {
+      try {
+        if (!actx) { actx = new AudioContext(); analizador = actx.createAnalyser(); analizador.fftSize = 2048; analizador.smoothingTimeConstant = 0; datosF = new Float32Array(analizador.frequencyBinCount); }
+        if (actx.state === 'suspended') actx.resume();
+        const flujo = audio.captureStream ? audio.captureStream() : null;
+        if (!flujo || !flujo.getAudioTracks().length) return;
+        if (fuente) fuente.disconnect();
+        fuente = actx.createMediaStreamSource(flujo);
+        fuente.connect(analizador);                // solo al analizador: lo que se oye sigue saliendo del reproductor
+      } catch (e) { fuente = null; }
+    }
+    audio.addEventListener('playing', () => { if (actx) conectarAnalisis(); });
+    window.oido.bandas = () => {
+      if (!actx) conectarAnalisis();
+      if (!fuente || audio.paused) return null;
+      analizador.getFloatFrequencyData(datosF);
+      const sr = actx.sampleRate, hz = sr / analizador.fftSize, alto = Math.min(16000, sr / 2), b = [];
+      let mayor = -120;
+      for (let k = 0; k < BANDAS; k++) {
+        const de = Math.max(1, Math.floor(40 * Math.pow(alto / 40, k / BANDAS) / hz)), a = Math.max(de + 1, Math.floor(40 * Math.pow(alto / 40, (k + 1) / BANDAS) / hz));
+        let e = 0; for (let j = de; j < a && j < datosF.length; j++) e += Math.pow(10, datosF[j] / 10);
+        const db = 10 * Math.log10(e / (a - de) + 1e-10); b.push(db); if (db > mayor) mayor = db;
+      }
+      maximo = Math.max(mayor, maximo - .15);      // se adapta al volumen de cada canción
+      return b.map(db => Math.max(0, Math.min(1, (db - (maximo - 42)) / 42)));
+    };
     const soltarHls = () => { if (hls) { hls.destroy(); hls = null; } };
     // hls.js solo se carga la primera vez que suena un en vivo
     const cargarHls = () => promesaHls ??= new Promise((res, rej) => {
@@ -1647,6 +1678,12 @@ window.__karaokeListo = () => enviarKaraoke(datosKaraoke());
 
 // PC: F11 abre o cierra el karaoke (segundo monitor si hay; si no, la misma pantalla)
 if (!esAndroid && window.oido.alKaraoke) {
+  // Mientras el karaoke está abierto, se le manda el sonido (16 bandas, ~30 veces por segundo)
+  setInterval(() => {
+    if (!karaokeLocalActivo || !window.oido.bandas) return;
+    const b = window.oido.bandas();
+    if (b) window.oido.karaoke(JSON.stringify({ tipo: 'audio', b: b.map(v => Math.round(v * 100) / 100) }));
+  }, 33);
   document.addEventListener('keydown', e => {
     if (e.key !== 'F11') return;
     e.preventDefault();
@@ -1770,6 +1807,7 @@ $('#idioma').onchange = e => {
   karaokeCancion();
 };
 prepararIdioma();
+
 traducirPagina();
 $('#ant').innerHTML = icono('prev', 22);
 $('#sig').innerHTML = icono('next', 22);

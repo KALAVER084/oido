@@ -24,6 +24,7 @@
     font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
   }
   #fondo { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  #rollo .l { text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
   #k { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
   #tit { font-size: 3.4vmin; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70vw; }
@@ -147,7 +148,6 @@ function mover() {
     els[k].classList.toggle('pasada', k < i);
   }
   centrar(!primera);
-  if (!primera && i >= 0) Fondo.destello();
 }
 
 // Arma todas las líneas una debajo de otra
@@ -178,140 +178,326 @@ window.addEventListener('resize', () => centrar(false));
 function recibir(m) {
   if (!m || typeof m !== 'object') return;
   if (m.tipo === 'cancion') { cancion = m; pintar(); Fondo.cancion(m); }
+  else if (m.tipo === 'audio') Fondo.audio(m.b);                  // sonido: 16 bandas, ~30 veces por segundo
   // Solo cambió el color (tema dinámico o elegido): se repinta sin reiniciar la letra
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; mover(); }
 }
-// ---------- Fondo animado: un estilo al azar por canción, con los colores del tema ----------
+// ---------- Fondo animado: 24 animaciones de líneas que reaccionan al sonido ----------
+// El sonido llega como 16 bandas (0 = graves … 15 = agudos), unas 30 veces por segundo, con Fondo.audio(b).
+// Los graves mueven el centro de las líneas, los agudos los bordes, el volumen el brillo y cada golpe manda una ola.
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
-  let W = 0, H = 0, M = 0, ef = -1, ps = [], extra = [], chispas = [], t = 0, ultimo = 0, clave = null;
-  let A = '83,234,221', T = '230,240,239', C = '160,240,232';   // acento, texto, acento claro (RGB)
-  const r = (a, b) => a + Math.random() * (b - a);
+  let W = 0, H = 0, u = 1, HUE = 175, FON = '#0e1615', ef = -1, clave = null, t = 0, ultimo = 0, Z = {};
+  const c = (h, s, l, a = 1) => `hsla(${((h % 360) + 360) % 360} ${s}% ${l}% / ${a})`;
 
-  // "hsl(175 78% 62%)" -> "r,g,b"
-  function rgb(hsl, ajusteL) {
-    const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/.exec(hsl || '');
-    if (!m) return null;
-    let h = +m[1], s = +m[2] / 100, l = (ajusteL ?? +m[3]) / 100;
-    const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
-    const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
-    return `${f(0)},${f(8)},${f(4)}`;
-  }
-  function tamano() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);   // en la tele no hace falta más
-    W = cv.width = Math.round(innerWidth * dpr);
-    H = cv.height = Math.round(innerHeight * dpr);
-    M = Math.min(W, H);
-  }
-  function luz(px, py, rad, c, a) {
-    if (a <= 0 || rad <= 0) return;
-    const g = x.createRadialGradient(px, py, 0, px, py, rad);
-    g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(.4, `rgba(${c},${a * .35})`); g.addColorStop(1, `rgba(${c},0)`);
-    x.fillStyle = g; x.beginPath(); x.arc(px, py, rad, 0, 6.283); x.fill();
-  }
-  const gota = () => ({ x: Math.random(), y: Math.random(), s: r(.004, .014), vy: 0, rastro: [] });
-
-  function crear() {
-    ps = []; extra = [];
-    if (ef === 0) for (let i = 0; i < 40; i++) ps.push({ x: Math.random(), y: Math.random(), s: r(.012, .04), v: r(.3, 1), p: r(0, 6.3), c: Math.random() < .75 ? 'A' : 'T' });
-    if (ef === 1) for (let i = 0; i < 12; i++) ps.push({ x: Math.random(), y: r(.1, .95), s: r(.07, .15), p: r(0, 6.3), v: r(.4, .8), c: Math.random() < .5 ? 'C' : 'A', dx: r(-1, 1) });
-    if (ef === 3) { for (let i = 0; i < 8; i++) extra.push({ x: Math.random(), y: Math.random(), s: r(.1, .22), c: Math.random() < .6 ? 'A' : 'T', p: r(0, 6.3) }); for (let i = 0; i < 60; i++) ps.push(gota()); }
-    if (ef === 4) for (let i = 0; i < 50; i++) ps.push({ x: Math.random(), y: Math.random(), s: r(.006, .022), v: r(.3, 1), p: r(0, 6.3), c: Math.random() < .6 ? 'T' : 'A' });
-  }
-  const col = c => c === 'A' ? A : c === 'T' ? T : C;
-
-  function dibujar() {
-    x.clearRect(0, 0, W, H);
-    if (ef === 0) for (const p of ps) {           // luciérnagas
-      p.x += Math.sin(t * .3 + p.p) * .0008 * p.v; p.y -= .0005 * p.v; if (p.y < -.05) p.y = 1.05;
-      luz(p.x * W, p.y * H, p.s * M, col(p.c), .15 + .4 * (.5 + .5 * Math.sin(t * 1.1 * p.v + p.p)));
+  // ===== Sonido =====
+  const Bs = new Float32Array(16), objetivo = new Float32Array(16);
+  let vol = 0, ultAudio = -10, olas = [], promBajo = 0, ultGolpe = 0, golpe = false;
+  function sonido(dt) {
+    const sinAudio = t - ultAudio > .5;                       // en pausa o sin análisis: movimiento suave propio
+    for (let k = 0; k < 16; k++) {
+      const obj = sinAudio ? (.14 + .08 * Math.sin(t * .7 + k * .9)) * (1 - k / 30) : objetivo[k];
+      Bs[k] += (obj - Bs[k]) * Math.min(1, dt * (obj > Bs[k] ? 18 : 5));
     }
-    if (ef === 1) for (const p of ps) {           // bokeh cálido
-      p.x += p.dx * .00016; if (p.x < -.1) p.x = 1.1; if (p.x > 1.1) p.x = -.1;
-      const f = .6 + .4 * Math.sin(t * .45 * p.v + p.p);
-      luz(p.x * W, p.y * H, p.s * M, col(p.c), .22 * f);
-      x.strokeStyle = `rgba(${col(p.c)},${.06 * f})`; x.lineWidth = 2; x.beginPath(); x.arc(p.x * W, p.y * H, p.s * M * .62, 0, 6.283); x.stroke();
+    let s = 0; for (let k = 0; k < 16; k++) s += Bs[k]; vol = s / 16;
+    const bajo = (Bs[0] + Bs[1] + Bs[2]) / 3;
+    golpe = !sinAudio && bajo > promBajo * 1.3 + .07 && bajo > .3 && t - ultGolpe > .28;
+    if (golpe) { ultGolpe = t; olas.push(0); }
+    promBajo += (bajo - promBajo) * Math.min(1, dt * 3);
+    olas = olas.map(o => o + dt * .9).filter(o => o < 1.6);
+  }
+  const banda = q => { const k = Math.min(15, Math.abs(q - .5) * 30), i = Math.floor(k), f = k - i; return Bs[i] * (1 - f) + Bs[Math.min(15, i + 1)] * f; };
+  const ola = fr => { let s = 0; for (const o of olas) s += Math.exp(-Math.pow((fr - (1 - o)) * 7, 2)); return s; };
+  const ruido = (q, i) => Math.sin(q * 23 + i * 1.7 + t * .9) * .35 + Math.sin(q * 51 - i * .9 + t * 1.4) * .2 + Math.sin(q * 9 + i * .4 - t * .5) * .45;
+  const centro = (q, a = 3.2) => Math.exp(-Math.pow((q - .5) * a, 2));
+  const trazo = (w, col) => { x.strokeStyle = col; x.lineWidth = Math.max(1, w); x.stroke(); };
+  const tapar = () => { x.fillStyle = FON; x.fill(); };
+  // Líneas apiladas que se tapan unas a otras (las de adelante tapan a las de atrás)
+  function apiladas(N, top, alto, altura, estilo) {
+    const esp = alto / N;
+    for (let i = 0; i < N; i++) {
+      const y0 = top + i * esp, fr = i / N, pts = [];
+      x.beginPath(); x.moveTo(0, y0);
+      for (let px = 0; px <= W; px += 4 * u) { const y = y0 - altura(px / W, i, fr, esp); x.lineTo(px, y); pts.push([px, y]); }
+      x.lineTo(W, y0 + H); x.lineTo(0, y0 + H); x.closePath();
+      estilo(i, fr, y0, pts, esp);
     }
-    if (ef === 2) {                               // ondas de agua
-      if (Math.random() < .05) ps.push({ x: r(.05, .95), y: r(.15, .9), k: 0 });
-      ps = ps.filter(p => p.k < 1);
-      for (const p of ps) {
-        p.k += .012;
-        for (let j = 0; j < 3; j++) {
-          const kk = p.k - j * .12; if (kk <= 0) continue;
-          x.strokeStyle = `rgba(${A},${.45 * (1 - kk)})`; x.lineWidth = 1.6;
-          x.beginPath(); x.ellipse(p.x * W, p.y * H, kk * .32 * M, kk * .12 * M, 0, 0, 6.283); x.stroke();
+  }
+  const alturaBase = (q, i, fr, esp, k = 3.2) => Math.max(0, ruido(q, i) + .45) * centro(q) * (.45 + banda(q) * 1.6 + ola(fr) * 1.4) * esp * k;
+
+  // ===== Las 24 animaciones =====
+  const EF = [
+    { // 1. Clásica
+      cuadro() { apiladas(26, H * .16, H * .72, alturaBase, (i, fr) => { tapar(); trazo(u * .9, c(HUE + i * 2, 45 + vol * 20, 40 + fr * 30 + vol * 20, .3 + fr * .45 + vol * .2)); }); } },
+    { // 2. Cordillera: perspectiva, varias cimas
+      cuadro() {
+        const N = 30, hor = H * .2;
+        for (let i = 0; i < N; i++) {
+          const d = i / (N - 1), y0 = hor + Math.pow(d, 1.7) * H * .72, am = (.35 + d * 1.4) * 14 * u * (1 + ola(d) * 1.2);
+          x.beginPath(); x.moveTo(0, y0);
+          for (let px = 0; px <= W; px += 4 * u) { const q = px / W, env = centro(q, 2.2) * .7 + centro(q - .22, 4) * .5 + centro(q + .25, 4) * .45; x.lineTo(px, y0 - Math.max(0, ruido(q, i) + .6) * env * am * (.5 + banda(q) * 1.3)); }
+          x.lineTo(W, H); x.lineTo(0, H); x.closePath(); tapar(); trazo(u * (.5 + d * .8), c(HUE + d * 20, 45, 35 + d * 40 + vol * 10, .15 + d * .7));
         }
-        luz(p.x * W, p.y * H, .05 * M, A, .3 * (1 - p.k));
-      }
-    }
-    if (ef === 3) {                               // lluvia en la ventana
-      for (const b of extra) luz(b.x * W, b.y * H, b.s * M, col(b.c), .16 + .05 * Math.sin(t * .5 + b.p));
-      for (const g of ps) {
-        if (!g.vy && Math.random() < .003 && g.s > .008) g.vy = r(.003, .008);
-        if (g.vy) { g.rastro.push({ x: g.x, y: g.y, a: .5 }); g.y += g.vy; g.x += Math.sin(t * 3 + g.y * 40) * .0008; if (g.y > 1.05) Object.assign(g, gota(), { y: -.02 }); }
-        g.rastro = g.rastro.filter(q => (q.a -= .008) > 0);
-        for (const q of g.rastro) { x.fillStyle = `rgba(${T},${q.a * .25})`; x.beginPath(); x.arc(q.x * W, q.y * H, g.s * M * .25, 0, 6.283); x.fill(); }
-        const px = g.x * W, py = g.y * H, rr = g.s * M;
-        x.fillStyle = `rgba(${T},.08)`; x.beginPath(); x.arc(px, py, rr, 0, 6.283); x.fill();
-        x.strokeStyle = `rgba(${T},.28)`; x.lineWidth = 1; x.stroke();
-        x.fillStyle = `rgba(${C},.55)`; x.beginPath(); x.arc(px - rr * .3, py - rr * .35, rr * .28, 0, 6.283); x.fill();
-      }
-    }
-    if (ef === 4) for (const p of ps) {           // polvo de luz
-      p.y += .0012 * p.v; p.x += Math.sin(t * .6 + p.p) * .001; if (p.y > 1.05) { p.y = -.05; p.x = Math.random(); }
-      luz(p.x * W, p.y * H, p.s * M, col(p.c), .25 + .2 * Math.sin(t * 2 * p.v + p.p));
-    }
-    if (ef === 5) for (let k = 0; k < 3; k++) {   // aurora
-      const c = k === 1 ? T : A;
-      for (let i = 0; i <= 40; i++) {
-        const u = i / 40, yy = .3 + k * .12 + Math.sin(u * 5 + t * .5 + k * 1.7) * .06 + Math.sin(u * 11 - t * .3) * .02;
-        luz(u * W, yy * H, .09 * M, c, .06 + .03 * Math.sin(t + k + u * 3));
-      }
-    }
-    // Destello de la línea nueva
-    chispas = chispas.filter(e => (e.vida -= .024) > 0);
-    for (const e of chispas) { e.x += e.vx; e.y += e.vy; luz(e.x * W, e.y * H, e.s * M * 2, A, .6 * e.vida); }
-  }
+      } },
+    { // 3. Pulso circular
+      cuadro() {
+        const N = 18, cx = W / 2, cy = H / 2, g = Bs[0] + Bs[1];
+        for (let k = N - 1; k >= 0; k--) {
+          const r0 = 20 * u + k * 10 * u * (1 + g * .08), fr = 1 - k / N, o = ola(fr);
+          x.beginPath();
+          for (let a = 0; a <= 360; a += 3) { const q = a / 360, rad = a * Math.PI / 180, r = r0 + Math.max(0, ruido(q, k) + .4) * (.4 + banda(Math.abs(q - .5)) * 1.4 + o) * 9 * u; a ? x.lineTo(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r * .85) : x.moveTo(cx + r, cy); }
+          x.closePath(); tapar(); trazo(u * .9, c(HUE + k * 3, 45, 38 + fr * 35 + g * 10, .25 + fr * .5));
+        }
+      } },
+    { // 4. Cortina: las ondas en vertical
+      cuadro() {
+        const N = 34, izq = W * .12, esp = W * .76 / N;
+        for (let i = 0; i < N; i++) {
+          const x0 = izq + i * esp, fr = i / N;
+          x.beginPath(); x.moveTo(x0, 0);
+          for (let py = 0; py <= H; py += 4 * u) { const q = py / H; x.lineTo(x0 - Math.max(0, ruido(q, i) + .55) * centro(q, 2.8) * (.45 + banda(q) * 1.6 + ola(fr)) * esp * 3, py); }
+          x.lineTo(x0 + W, H); x.lineTo(x0 + W, 0); x.closePath(); tapar(); trazo(u * .9, c(HUE + i * 2, 45, 42 + fr * 30 + vol * 15, .3 + fr * .45));
+        }
+      } },
+    { // 5. Espejo: hacia arriba y hacia abajo, como un osciloscopio
+      cuadro() {
+        const N = 16, top = H * .2, esp = H * .6 / N; x.lineWidth = Math.max(1, u * .8);
+        for (let i = 0; i < N; i++) {
+          const y0 = top + i * esp + esp / 2, fr = i / N;
+          for (const s of [-1, 1]) {
+            x.beginPath();
+            for (let px = 0; px <= W; px += 4 * u) { const q = px / W, h = Math.max(0, ruido(q, i) + .5) * centro(q, 2.6) * (.45 + banda(q) * 1.6 + ola(fr)) * esp * 1.3; px ? x.lineTo(px, y0 - s * h) : x.moveTo(px, y0); }
+            x.strokeStyle = c(HUE + i * 3, 50, 50 + fr * 25, (.25 + fr * .4 + vol * .2) * (s < 0 ? 1 : .55)); x.stroke();
+          }
+        }
+      } },
+    { // 6. Puntos
+      cuadro() { apiladas(24, H * .16, H * .72, alturaBase, (i, fr, y0, pts) => { tapar(); x.fillStyle = c(HUE + i * 2, 50, 55 + fr * 25, .4 + fr * .5); const r = Math.max(1, u * (.6 + fr * .7)); for (let k = 0; k < pts.length; k += 2) x.fillRect(pts[k][0] - r / 2, pts[k][1] - r / 2, r, r); }); } },
+    { // 7. Cumbres encendidas
+      cuadro() { apiladas(24, H * .16, H * .72, (q, i, fr, esp) => alturaBase(q, i, fr, esp, 3.4), (i, fr, y0, pts, esp) => { tapar(); const g = x.createLinearGradient(0, y0 - esp * 5, 0, y0); g.addColorStop(0, c(HUE + 30, 75, 66 + vol * 12, .95)); g.addColorStop(.5, c(HUE + 10, 55, 50, .55)); g.addColorStop(1, c(HUE, 35, 30, .18)); x.strokeStyle = g; x.lineWidth = Math.max(1, u * (.8 + fr * .5)); x.stroke(); }); } },
+    { // 8. Gotas: caen gotas y sus ondas recorren las líneas (cada golpe, una gota)
+      crear() { Z.gotas = []; },
+      cuadro(dt) {
+        if (Math.random() < dt * .3) Z.gotas.push({ q: Math.random() * .8 + .1, i: Math.floor(Math.random() * 24), e: 0, f: .8 });
+        if (golpe) Z.gotas.push({ q: Math.random() * .6 + .2, i: 6 + Math.floor(Math.random() * 12), e: 0, f: 1.2 + vol });
+        for (const g of Z.gotas) g.e += dt; Z.gotas = Z.gotas.filter(g => g.e < 3);
+        const extra = (q, i, esp) => { let e = 0; for (const g of Z.gotas) { const d = Math.hypot((q - g.q) * W, (i - g.i) * esp); e += Math.exp(-Math.pow((d - g.e * 160 * u) / (22 * u), 2)) * Math.max(0, 1 - g.e / 3) * g.f; } return e; };
+        apiladas(24, H * .16, H * .72, (q, i, fr, esp) => (Math.max(0, ruido(q, i) * .5 + .35) * centro(q, 2.2) * esp * 1.4 * (.6 + vol) + extra(q, i, esp) * esp * 1.8), (i, fr) => { tapar(); trazo(u * .9, c(HUE + 190 + i * 2, 40, 45 + fr * 30, .3 + fr * .5)); });
+      } },
+    { // 9. Papel: capas recortadas
+      cuadro() { apiladas(14, H * .2, H * .72, (q, i, fr, esp) => Math.max(0, ruido(q, i) * .8 + .7) * (.35 + centro(q, 1.6) * .65) * (.5 + banda(q) * 1.3 + ola(fr)) * esp * 1.6, (i, fr) => { x.fillStyle = c(HUE + fr * 40, 32, 10 + fr * 16 + vol * 6, 1); x.fill(); trazo(u * .6, c(HUE + fr * 40, 40, 30 + fr * 20, .6)); }); } },
+    { // 10. Espiral: una sola línea que gira
+      cuadro() {
+        const cx = W / 2, cy = H / 2, vueltas = 9, paso = (Math.min(W, H) * .46) / (vueltas * Math.PI * 2);
+        x.beginPath();
+        for (let a = 0; a < vueltas * Math.PI * 2; a += .04) { const q = (a % (Math.PI * 2)) / (Math.PI * 2), k = Math.floor(a / (Math.PI * 2)), r = 8 * u + a * paso + Math.max(0, ruido(q, k) + .4) * (3 + banda(q) * 9) * u, ang = a + t * .15; const X2 = cx + Math.cos(ang) * r, Y2 = cy + Math.sin(ang) * r * .82; a ? x.lineTo(X2, Y2) : x.moveTo(X2, Y2); }
+        trazo(u, c(HUE + 20, 50, 55 + vol * 20, .45 + vol * .3));
+      } },
+    { // 11. Neón
+      cuadro() { apiladas(12, H * .22, H * .64, (q, i, fr, esp) => Math.max(0, ruido(q, i) + .55) * centro(q, 2.6) * (.45 + banda(q) * 1.6 + ola(fr)) * esp * 2.6, (i, fr) => { tapar(); trazo(u * 6, c(HUE + i * 6, 90, 60, .12 + fr * .1 + vol * .1)); trazo(u * 1.1, c(HUE + i * 6, 90, 72, .5 + fr * .4)); }); } },
+    { // 12. Espectro: el historial del sonido se aleja hacia atrás
+      crear() { Z.filas = []; Z.reloj = 0; },
+      cuadro(dt) {
+        Z.reloj += dt;
+        if (Z.reloj > .09) { Z.reloj = 0; const f = []; for (let j = 0; j <= 100; j++) { const q = j / 100; f.push((banda(q) * .9 + Math.max(0, Math.sin(q * 31 - t * 2) * .06)) * (centro(q, 2.2) * .7 + .3)); } Z.filas.unshift(f); if (Z.filas.length > 36) Z.filas.pop(); }
+        for (let a = Z.filas.length - 1; a >= 0; a--) {
+          const d = a / 36, y0 = H * .9 - Math.pow(d, .8) * H * .68, esc = 1 - d * .55, am = 70 * u * esc, ancho = W * (.55 + .45 * esc), x0 = (W - ancho) / 2, f = Z.filas[a];
+          x.beginPath(); x.moveTo(x0, y0); for (let j = 0; j <= 100; j++) x.lineTo(x0 + ancho * j / 100, y0 - f[j] * am);
+          x.lineTo(x0 + ancho, y0 + H); x.lineTo(x0, y0 + H); x.closePath(); tapar(); trazo(u * (.6 + (1 - d) * .6), c(HUE + d * 30, 50, 40 + (1 - d) * 35, .15 + (1 - d) * .7));
+        }
+      } },
+    { // 13. Curvas de nivel: un terreno dibujado con sus líneas de altura
+      crear() { Z.b = 0; },
+      cuadro(dt) {
+        if (golpe) Z.b = Math.min(1.4, Z.b + .5); Z.b = Math.max(0, Z.b - dt * .5);
+        const GX = 64, GY = 36, cw = W / GX, ch = H / GY, v = new Float32Array((GX + 1) * (GY + 1)), am = 1 + vol * .6;
+        for (let j = 0; j <= GY; j++) for (let i = 0; i <= GX; i++) { const px = i / GX, py = j / GY; v[j * (GX + 1) + i] = (Math.sin(px * 5.1 + t * .15) * Math.cos(py * 4.3 - t * .12) + Math.sin((px + py) * 3.7 + t * .09) * .6 + Math.sin(px * 11 - py * 7 + t * .2) * .25) * am + Z.b * 2.2 * Math.exp(-((px - .5) ** 2 * 9 + (py - .5) ** 2 * 9)); }
+        const A = (i, j) => v[j * (GX + 1) + i], S = { 1: 'lt', 2: 'tr', 3: 'lr', 4: 'rb', 5: 'lt rb', 6: 'tb', 7: 'lb', 8: 'lb', 9: 'tb', 10: 'tr lb', 11: 'rb', 12: 'lr', 13: 'tr', 14: 'lt' };
+        x.lineWidth = Math.max(1, u * .8);
+        for (let L = -1.6; L <= 1.6 + Z.b * 2; L += .32) {
+          x.strokeStyle = c(HUE + L * 25, 50, 45 + L * 8, .45); x.beginPath();
+          for (let j = 0; j < GY; j++) for (let i = 0; i < GX; i++) {
+            const a = A(i, j), b = A(i + 1, j), d = A(i, j + 1), e = A(i + 1, j + 1), k = (a > L) | ((b > L) << 1) | ((e > L) << 2) | ((d > L) << 3);
+            if (k === 0 || k === 15) continue;
+            const X0 = i * cw, Y0 = j * ch, P = { t: [X0 + cw * (L - a) / (b - a), Y0], r: [X0 + cw, Y0 + ch * (L - b) / (e - b)], b: [X0 + cw * (L - d) / (e - d), Y0 + ch], l: [X0, Y0 + ch * (L - a) / (d - a)] };
+            for (const s of S[k].split(' ')) { x.moveTo(...P[s[0]]); x.lineTo(...P[s[1]]); }
+          }
+          x.stroke();
+        }
+      } },
+    { // 14. Cuerdas: cada cuerda es una banda del sonido
+      cuadro() {
+        const N = 14, top = H * .18, esp = H * .64 / (N - 1);
+        for (let i = 0; i < N; i++) {
+          const a = Bs[Math.round(i / (N - 1) * 15)], y0 = top + i * esp;
+          x.beginPath();
+          for (let px = 0; px <= W; px += 3 * u) { const q = px / W, d = Math.sin(Math.PI * q * (1 + i % 4)) * Math.sin(t * (8 + i * 2)) * a * esp * .9 + Math.sin(q * 20 + t + i) * .5 * u; px ? x.lineTo(px, y0 + d) : x.moveTo(px, y0 + d); }
+          trazo(u * (.6 + (N - i) / N * 1.1), c(HUE + i * 4, 50, 40 + a * 40, .25 + a * .65));
+        }
+      } },
+    { // 15. Interferencia: dos fuentes de ondas; los golpes encienden una tercera
+      crear() { Z.f3 = 0; },
+      cuadro(dt) {
+        if (golpe) Z.f3 = Math.min(1.6, Z.f3 + .8); Z.f3 = Math.max(0, Z.f3 - dt * .6);
+        const N = 34, top = H * .1, esp = H * .8 / N, fuentes = [[W * (.3 + .08 * Math.sin(t * .2)), H * .5, 1], [W * (.7 + .08 * Math.cos(t * .17)), H * .5, 1], [W * .5, H * .3, Z.f3]], am = .5 + vol * 1.2;
+        for (let i = 0; i < N; i++) {
+          const y0 = top + i * esp, fr = i / N;
+          x.beginPath();
+          for (let px = 0; px <= W; px += 4 * u) { let s = 0; for (const f of fuentes) { if (!f[2]) continue; const d = Math.hypot(px - f[0], y0 - f[1]) / u; s += Math.sin(d * .09 - t * 2.2) / Math.sqrt(1 + d * .02) * f[2]; } const y = y0 + s * esp * .55 * am; px ? x.lineTo(px, y) : x.moveTo(px, y); }
+          trazo(u * .8, c(HUE + fr * 40, 45, 45 + Math.sin(fr * 3.14) * 25, .4));
+        }
+      } },
+    { // 16. Dunas: arena ondulada; los golpes son ráfagas
+      crear() { Z.racha = 0; },
+      cuadro(dt) {
+        if (golpe) Z.racha = Math.max(Z.racha, .6); Z.racha = Math.max(0, Z.racha - dt * .5);
+        const N = 40, top = H * .12, esp = H * .8 / N;
+        for (let i = 0; i < N; i++) {
+          const y0 = top + i * esp, fr = i / N, r = Z.racha * Math.exp(-Math.pow((fr - (1 - Z.racha)) * 6, 2));
+          x.beginPath(); x.moveTo(0, y0);
+          for (let px = 0; px <= W; px += 4 * u) { const q = px / W; x.lineTo(px, y0 - (Math.sin(q * 16 + i * .55 + t * .35) * .55 + Math.sin(q * 7 - i * .2 + t * .2) * .45 + 1) * esp * .7 * (.6 + banda(q) * 1.4 + r * 2.5)); }
+          x.lineTo(W, y0 + H); x.lineTo(0, y0 + H); x.closePath(); tapar(); trazo(u * .8, c(HUE + 25 + fr * 10, 40, 35 + fr * 35, .25 + fr * .55));
+        }
+      } },
+    { // 17. Corona: rayos alrededor del centro
+      cuadro() {
+        const cx = W / 2, cy = H / 2, N = 180, r0 = H * .2; x.lineWidth = Math.max(1, u * .8);
+        for (let k = 0; k < N; k++) {
+          const a = k / N * Math.PI * 2 + t * .05, q = k / N, l = (Math.max(0, ruido(q * 2 % 1, k % 7) + .6) * .35 + .1 + banda(q) * .8) * H * .24 * (1 + ola(.5) * .4);
+          x.strokeStyle = c(HUE + 20 + q * 40, 60, 50 + l / (H * .24) * 20, .3 + l / (H * .24) * .4);
+          x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * .85); x.lineTo(cx + Math.cos(a) * (r0 + l), cy + Math.sin(a) * (r0 + l) * .85); x.stroke();
+        }
+      } },
+    { // 18. Malla: una tela de líneas; los golpes levantan colinas
+      crear() { Z.bultos = []; },
+      cuadro(dt) {
+        if (golpe || Math.random() < dt * .12) Z.bultos.push({ x: Math.random(), y: Math.random(), e: 0, f: golpe ? .6 + vol : .7 });
+        for (const b of Z.bultos) b.e += dt; Z.bultos = Z.bultos.filter(b => b.e < 6);
+        const alt = (px, py) => { let z = Math.sin(px * 6 + t * .4) * Math.cos(py * 5 - t * .3) * (.15 + vol * .3); for (const b of Z.bultos) z += Math.exp(-((px - b.x) ** 2 + (py - b.y) ** 2) * 28) * Math.sin(Math.min(1, b.e / 1.2) * Math.PI / 2) * Math.max(0, 1 - (b.e - 3) / 3) * b.f; return z; };
+        const pr = (px, py) => [W * .06 + px * W * .88, H * .18 + py * H * .68 - alt(px, py) * H * .18], G = 28; x.lineWidth = Math.max(1, u * .7);
+        for (let j = 0; j <= G; j++) { x.beginPath(); for (let i = 0; i <= 56; i++) { const p = pr(i / 56, j / G); i ? x.lineTo(...p) : x.moveTo(...p); } x.strokeStyle = c(HUE + j * 2, 45, 40 + j / G * 30, .35); x.stroke(); }
+        for (let i = 0; i <= 40; i++) { x.beginPath(); for (let j = 0; j <= G * 2; j++) { const p = pr(i / 40, j / (G * 2)); j ? x.lineTo(...p) : x.moveTo(...p); } x.strokeStyle = c(HUE + 20, 40, 40, .18); x.stroke(); }
+      } },
+    { // 19. Valle: dos cordilleras frente a frente, con la letra en medio
+      cuadro() {
+        const N = 12, esp = H * .32 / N;
+        for (const lado of [-1, 1]) for (let i = 0; i < N; i++) {
+          const fr = i / N, y0 = lado < 0 ? H * .04 + i * esp : H * .96 - i * esp;
+          x.beginPath(); x.moveTo(0, y0);
+          for (let px = 0; px <= W; px += 4 * u) { const q = px / W, h = Math.max(0, ruido(q, i + (lado > 0 ? 20 : 0)) + .55) * centro(q, 2.6) * (.45 + banda(q) * 1.6 + ola(fr)) * esp * 2.4; x.lineTo(px, y0 + (lado < 0 ? h : -h)); }
+          x.lineTo(W, lado < 0 ? -H : H * 2); x.lineTo(0, lado < 0 ? -H : H * 2); x.closePath(); tapar(); trazo(u * .9, c(HUE + i * 3 + (lado > 0 ? 30 : 0), 45, 40 + (1 - fr) * 30, .25 + (1 - fr) * .5));
+        }
+      } },
+    { // 20. Trigal: filas en perspectiva; el viento (y la música) son franjas de luz
+      crear() { Z.racha = 0; },
+      cuadro(dt) {
+        if (golpe) Z.racha = Math.max(Z.racha, .7); Z.racha = Math.max(0, Z.racha - dt * .35);
+        const viento = (q, d) => { const a = Math.sin(q * 7 - t * .9 + d * 5) * .5 + Math.sin(q * 13 + t * .4 - d * 9) * .25 + Math.sin(q * 3 - t * .5 + d * 2) * .25, r = Z.racha * Math.exp(-Math.pow((q - (t * .35 % 1.4 - .2)) * 4, 2)); return Math.max(0, Math.min(1, .4 + a * .45 + r * .9 + banda(q) * .35)); };
+        const N = 34, hor = H * .3;
+        for (let i = 0; i < N; i++) {
+          const d = i / (N - 1), y0 = hor + Math.pow(d, 1.6) * H * .66, am = (1.5 + d * 6) * u, paso = 4 * u * (.6 + d * .8);
+          x.lineWidth = Math.max(1, u * (.5 + d * .9));
+          let cubo = -1, abierto = false;
+          for (let px = 0; px <= W + paso; px += paso) {
+            const q = px / W, v = viento(q, d), ond = Math.sin(q * 30 + i * 1.3 + t * 1.6) * .4 + Math.sin(q * 11 - i * .7 + t) * .6, y = y0 - (ond * .5 + .5) * am * (.4 + v * .9);
+            const cb = Math.round(v * 8);                                   // agrupa tramos del mismo brillo (menos trabajo)
+            if (cb !== cubo) {
+              if (abierto) { x.lineTo(px, y); x.stroke(); }
+              const vv = cb / 8; x.strokeStyle = c(HUE + 30 + vv * 15, 35 + vv * 30, 18 + d * 18 + vv * 40 * (.4 + d * .6), (.18 + d * .55) * (.5 + vv * .7));
+              x.beginPath(); x.moveTo(px, y); cubo = cb; abierto = true;
+            } else x.lineTo(px, y);
+          }
+          if (abierto) x.stroke();
+        }
+      } },
+    { // 21. Osciloscopio: una sola línea que dibuja figuras con el sonido
+      cuadro() {
+        const cx = W / 2, cy = H / 2, R = H * .32 * (.6 + vol * .8), fb = 2 + Math.sin(t * .07) * .5, ph = t * .4;
+        x.beginPath();
+        for (let k = 0; k <= 1200; k++) { const s = k / 1200 * Math.PI * 2, j = Bs[(k >> 4) % 16] * .12, px = cx + Math.sin(3 * s + ph) * R * 1.45 * (1 + j), py = cy + Math.sin(fb * s) * R * (1 + j); k ? x.lineTo(px, py) : x.moveTo(px, py); }
+        trazo(u * 5, c(HUE + 20, 80, 55, .08 + vol * .08)); trazo(u * 1.1, c(HUE + 20, 70, 70, .45 + vol * .4));
+      } },
+    { // 22. Ecos: la onda deja copias que suben y se apagan; las de los golpes, más brillantes
+      crear() { Z.ecos = []; Z.reloj = 0; },
+      cuadro(dt) {
+        const onda = () => { const f = []; for (let j = 0; j <= 120; j++) { const q = j / 120; f.push((banda(q) + Math.sin(q * 40 + t * 3) * .03) * Math.exp(-Math.pow((q - .5) * 2.4, 2))); } return f; };
+        Z.reloj += dt; if (Z.reloj > 1 / 9 || golpe) { Z.reloj = 0; Z.ecos.push({ f: onda(), e: 0, b: golpe ? 1 : 0 }); }
+        for (const e of Z.ecos) e.e += dt; Z.ecos = Z.ecos.filter(e => e.e < 4.5);
+        const base = H * .86;
+        for (const e of Z.ecos) {
+          const y0 = base - e.e * H * .17, a = Math.max(0, 1 - e.e / 4.5); x.beginPath();
+          for (let j = 0; j <= 120; j++) { const px = j / 120 * W, y = y0 - e.f[j] * H * .24 * (1 - e.e * .1); j ? x.lineTo(px, y) : x.moveTo(px, y); }
+          trazo(u * (.6 + e.b * .6), c(HUE + e.e * 12, 50 + e.b * 20, 45 + e.b * 25, a * (.3 + e.b * .45)));
+        }
+        const viva = onda(); x.beginPath(); for (let j = 0; j <= 120; j++) { const px = j / 120 * W, y = base - viva[j] * H * .24; j ? x.lineTo(px, y) : x.moveTo(px, y); } trazo(u * 1.4, c(HUE + 10, 65, 70, .95));
+      } },
+    { // 23. Fibras: un haz que se abre con la música
+      cuadro() {
+        const N = 60, cy = H / 2;
+        for (let i = 0; i < N; i++) {
+          const s = (i / (N - 1) - .5) * 2, k = Math.round(Math.abs(s) * 15), abre = (.25 + Bs[k] * .9 + vol * .4) * H * .36;
+          x.beginPath();
+          for (let px = 0; px <= W; px += 5 * u) { const q = px / W, env = Math.sin(q * Math.PI), y = cy + s * abre * env + Math.sin(q * 6 + t * .8 + i * .15) * 12 * u * env; px ? x.lineTo(px, y) : x.moveTo(px, y); }
+          trazo(u * .7, c(HUE + s * 30, 55, 45 + Bs[k] * 30, .18 + Bs[k] * .4));
+        }
+      } },
+    { // 24. Marea: líneas que cruzan como olas lentas
+      cuadro() {
+        const N = 30;
+        for (let i = 0; i < N; i++) {
+          const fr = i / N, y0 = H * (.08 + fr * .84), o = ola(fr);
+          x.beginPath();
+          for (let px = 0; px <= W; px += 5 * u) { const q = px / W, h = Math.sin(q * 4.5 - t * .6 + fr * 6) * (14 + banda(q) * 30 + o * 20) * u + Math.sin(q * 13 + t * .9 + i) * 3 * u; px ? x.lineTo(px, y0 + h) : x.moveTo(px, y0 + h); }
+          trazo(u * .9, c(HUE + fr * 40, 45, 38 + Math.sin(fr * Math.PI) * 28 + vol * 12, .3 + Math.sin(fr * Math.PI) * .4));
+        }
+      } },
+  ];
 
+  function tamano() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), w = Math.min(1920, Math.round(innerWidth * dpr));
+    W = cv.width = w; H = cv.height = Math.round(w * innerHeight / Math.max(1, innerWidth)); u = H / 360;
+  }
   // Máximo 30 cuadros por segundo; si el karaoke no está a la vista, no dibuja
   function bucle(ahora) {
     requestAnimationFrame(bucle);
-    if (document.hidden || ahora - ultimo < 33) return;
-    ultimo = ahora;
+    if (!x || document.hidden || ahora - ultimo < 33) return;
+    const dt = Math.min(.1, (ahora - ultimo) / 1000); ultimo = ahora;
     if (innerWidth === 0 || innerHeight === 0) return;
-    if (W !== Math.round(innerWidth * Math.min(window.devicePixelRatio || 1, 1.5))) tamano();
-    t += .033;
-    if (ef >= 0) dibujar();
+    if (W !== Math.min(1920, Math.round(innerWidth * Math.min(window.devicePixelRatio || 1, 2)))) tamano();
+    t += dt; sonido(dt);
+    if (ef < 0) return;
+    x.globalAlpha = 1; x.fillStyle = FON; x.fillRect(0, 0, W, H);
+    EF[ef].cuadro(dt);
   }
   addEventListener('resize', tamano);
   requestAnimationFrame(bucle);
 
+  const hslRgb = txt => {
+    const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%/.exec(txt || ''); if (!m) return null;
+    const h = +m[1] / 360, s = +m[2] / 100, l = +m[3] / 100;
+    const f = n => { const k = (n + h * 12) % 12, a = s * Math.min(l, 1 - l); return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+    return [f(0), f(8), f(4)];
+  };
   return {
     colores(tema) {
       if (!tema) return;
-      const h = /hsl\(\s*([\d.]+)/.exec(tema['--acento'] || '');
-      A = rgb(tema['--acento']) || A;
-      T = rgb(tema['--texto']) || T;
-      if (h) C = rgb(`hsl(${h[1]} 70% 78%)`) || C;
+      const m = /hsl\(\s*([\d.]+)/.exec(tema['--acento'] || ''); if (m) HUE = +m[1];
+      const f = hslRgb(tema['--fondo']); if (f) FON = `rgb(${f[0]},${f[1]},${f[2]})`;
     },
     cancion(m) {
       this.colores(m.tema);
       const k = (m.titulo || '') + '|' + (m.canal || '');
-      if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): mismo fondo
+      if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): misma animación
       clave = k;
-      let n; do { n = Math.floor(Math.random() * 6); } while (n === ef);
-      ef = n;
-      crear();
+      let n; do { n = Math.floor(Math.random() * EF.length); } while (n === ef);
+      ef = n; Z = {}; olas = [];
+      if (EF[ef].crear) EF[ef].crear();
     },
-    destello() {
-      for (let i = 0; i < 14; i++) {
-        const a = r(0, 6.3), v = r(.004, .012);
-        chispas.push({ x: .5, y: .5, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 1.6, s: r(.008, .02), vida: 1 });
-      }
-    },
+    // 16 bandas del sonido que está sonando (0..1)
+    audio(b) { if (!b || !b.length) return; for (let k = 0; k < 16; k++) objetivo[k] = Math.max(0, Math.min(1, +b[k] || 0)); ultAudio = t; },
     get estilo() { return ef; },
+    total: () => EF.length,
   };
 })();
 
