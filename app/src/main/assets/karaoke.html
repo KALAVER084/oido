@@ -242,7 +242,7 @@ function recibir(m) {
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; posLlego = performance.now(); if (m.sonando != null) sonandoK = !!m.sonando; mover(); pintarControles(); }
 }
-// ---------- Fondo animado: 64 animaciones de líneas, tranquilas ----------
+// ---------- Fondo animado: 78 animaciones de líneas, tranquilas ----------
 // Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
@@ -384,12 +384,14 @@ const Fondo = (() => {
     const { k, d } = pasoR(n, f), fase = (t * .25) % 1, rot0 = t * .05 * giro;
     for (let i = -2; i < 200; i++) {
       const j = i - fase, r = R * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.2) continue;
-      cb(j, r, rot0 + j * d * giro + desfase, Math.min(1, Math.max(0, j / 40)));
+      cb(j, r, rot0 + j * d * giro + desfase, brilloTam(r));
     }
   }
   function poligonoR(n, r, a, salto = 1) { x.beginPath(); for (let m = 0; m <= n; m++) { const an = a + ((m * salto) % n) * 2 * Math.PI / n - Math.PI / 2; const px = W / 2 + Math.cos(an) * r, py = H / 2 + Math.sin(an) * r; m ? x.lineTo(px, py) : x.moveTo(px, py); } x.closePath(); }
+  // Brillo según el tamaño en pantalla: nacen tenues en el centro y llegan al borde con todo su brillo
+  const brilloTam = r => Math.min(1, Math.max(0, r / (Math.hypot(W, H) / 2)));
   const colNivelR = (q, a = 1, h = 0) => c(HUE + h + q * 50, 60, 40 + q * 35, (.3 + q * .55) * a);
-  const remolino = (n, f, R, salto = 1) => nivelesR(n, f, R, (j, r, a, q) => { poligonoR(n, r, a, salto); trazo(u * (1.4 - q * .9), colNivelR(q)); });
+  const remolino = (n, f, R, salto = 1) => nivelesR(n, f, R, (j, r, a, q) => { poligonoR(n, r, a, salto); trazo(u * (.5 + q * .9), colNivelR(q)); });
 
   // Espacio: estrellas de fondo (fijas, titilan), copo de Koch y brillo del centro
   function estrellasL(n) {
@@ -408,6 +410,86 @@ const Fondo = (() => {
   const colEstela = (h = 0, a = 1) => v => c(HUE + h + 30 + v * 20, 70, 40 + v * 38, v * .85 * a), anchoEstela = v => u * (.5 + v * 1.1);
   function trazar(brazos, s0, n, dts, cx, cy, E) { const pts = []; for (let k = 0; k < n; k++) { const [px, py] = pluma(brazos, s0 - k * dts); pts.push([cx + px * E, cy + py * E]); } return pts; }
   function brazosVisibles(brazos, s, cx, cy, E) { let px = cx, py = cy; for (const [w, r, f = 0] of brazos) { const nx = px + Math.cos(w * s + f) * r * E, ny = py + Math.sin(w * s + f) * r * E; x.beginPath(); x.arc(px, py, r * E, 0, Math.PI * 2); trazo(u * .5, c(HUE + 20, 40, 40, .18)); x.beginPath(); x.moveTo(px, py); x.lineTo(nx, ny); trazo(u * .8, c(HUE + 20, 50, 55, .45)); px = nx; py = ny; } x.beginPath(); x.arc(px, py, 2.5 * u, 0, Math.PI * 2); x.fillStyle = c(HUE + 40, 90, 85, .95); x.fill(); }
+
+  // ===== Zoom infinito: la figura es idéntica a una parte de sí misma; al llegar a ese aumento, el ciclo vuelve a empezar =====
+  const ZOOM = 1.25;                    // las de zoom infinito van un 25 % más rápido que las demás
+  const colTam = q => c(HUE + q * 50, 60, 38 + q * 38, .25 + q * .6);
+  const diagonal = () => Math.hypot(W, H) / 2;
+  // Redes (cuadrícula, triángulos): cada nivel aparece suave al agrandarse y se va al ser enorme
+  function redInfinita(familias, fase, base) {
+    const cx = W / 2, cy = H / 2, rot = t * .02, L = lotes(), D = diagonal();
+    for (let k = -5; k < 4; k++) {
+      const g = base * Math.pow(2, k + fase); if (g < 4 * u || g > D * 2.2) continue;
+      const a = Math.min(1, (g - 4 * u) / (30 * u)) * Math.min(1, (D * 2.2 - g) / (D * .9)), q = Math.min(1, g / (D * .6)), clave = Math.round(a * 8) * 10 + Math.round(q * 6);
+      for (const ang of familias) { const an = ang + rot, dx = Math.cos(an), dy = Math.sin(an), nx = -dy, ny = dx, n = Math.ceil(D / g); for (let m = -n; m <= n; m++) { const ox = cx + nx * m * g, oy = cy + ny * m * g; L.tramo(clave, ox - dx * D, oy - dy * D, ox + dx * D, oy + dy * D); } }
+    }
+    L.dibujar(k => { const a = Math.floor(k / 10) / 8, q = (k % 10) / 6; x.lineWidth = Math.max(1, u * (.4 + q * .9)); x.strokeStyle = c(HUE + q * 50, 60, 38 + q * 38, a * (.3 + q * .55)); });
+  }
+  // Árbol infinito: viaje hacia la punta de la rama izquierda (cada rama es un árbol completo)
+  function arbolInfinito(r, th, th2, vel, pantallaY = .5) {
+    const wr = r * Math.cos(th), wi = r * Math.sin(th), wr2 = r * Math.cos(-th2), wi2 = r * Math.sin(-th2);
+    const mul = (a, b, cc, d) => [a * cc - b * d, a * d + b * cc], div = (a, b, cc, d) => { const n = cc * cc + d * d; return [(a * cc + b * d) / n, (b * cc - a * d) / n]; };
+    const P = div(0, 1, 1 - wr, -wi), fase = (t * vel * ZOOM) % 1, esc = H * .42 * Math.pow(r, -fase), ang = -th * fase, Mr = esc * Math.cos(ang), Mi = esc * Math.sin(ang);
+    const pant = (zr, zi) => { const [a, b] = mul(zr - P[0], zi - P[1], Mr, Mi); return [W / 2 + a, H * pantallaY - b]; };
+    let b = [0, 0], v = [0, 1]; for (let k = 0; k < 5; k++) { b = div(b[0], b[1] - 1, wr, wi); v = div(v[0], v[1], wr, wi); }
+    const L = lotes(), lim = 1.6 * u; let n = 0;
+    const rama = (br, bi, vr, vi) => {
+      const lp = Math.hypot(vr, vi) * esc; if (lp < lim || n > 9000) return;
+      const [sx, sy] = pant(br, bi), ext = lp / (1 - r) * 1.1; if (sx + ext < 0 || sx - ext > W || sy + ext < 0 || sy - ext > H) return;
+      const [ex, ey] = pant(br + vr, bi + vi); n++; const q = Math.min(1, lp / (H * .4)); L.tramo(Math.round(q * 8), sx, sy, ex, ey);
+      const [c1, d1] = mul(vr, vi, wr, wi), [c2, d2] = mul(vr, vi, wr2, wi2); rama(br + vr, bi + vi, c1, d1); rama(br + vr, bi + vi, c2, d2);
+    };
+    rama(b[0], b[1], v[0], v[1]);
+    x.lineCap = 'round'; L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.5 + q * 3)); x.strokeStyle = c(HUE + 30 + (1 - q) * 20, 60, 38 + (1 - q) * 35, .35 + q * .5); }); x.lineCap = 'butt';
+  }
+
+  // Árbol infinito general: ramas = [[tamaño, ángulo], ...]; viajamos hacia la punta de la primera
+  function arbolGen(ramas, vel, { esc0 = .42, grosor = 3 } = {}) {
+    const mul = (a, b, cc, d) => [a * cc - b * d, a * d + b * cc], div = (a, b, cc, d) => { const n = cc * cc + d * d; return [(a * cc + b * d) / n, (b * cc - a * d) / n]; };
+    const ws = ramas.map(([r, a]) => [r * Math.cos(a), r * Math.sin(a)]), [wr, wi] = ws[0], r0 = Math.hypot(wr, wi), th = Math.atan2(wi, wr);
+    const P = div(0, 1, 1 - wr, -wi), fase = (t * vel * ZOOM) % 1, esc = H * esc0 * Math.pow(r0, -fase), ang = -th * fase, Mr = esc * Math.cos(ang), Mi = esc * Math.sin(ang);
+    const pant = (zr, zi) => { const [a, b] = mul(zr - P[0], zi - P[1], Mr, Mi); return [W / 2 + a, H * .5 - b]; };
+    let b = [0, 0], v = [0, 1]; for (let k = 0; k < 6; k++) { b = div(b[0], b[1] - 1, wr, wi); v = div(v[0], v[1], wr, wi); }
+    const rmax = Math.max(...ramas.map(r => r[0])), L = lotes(), lim = 1.6 * u; let n = 0;
+    const rama = (br, bi, vr, vi) => {
+      const lp = Math.hypot(vr, vi) * esc; if (lp < lim || n > 9000) return;
+      const [sx, sy] = pant(br, bi), ext = lp / (1 - rmax) * 1.1; if (sx + ext < 0 || sx - ext > W || sy + ext < 0 || sy - ext > H) return;
+      const [ex, ey] = pant(br + vr, bi + vi); n++; L.tramo(Math.round(Math.min(1, lp / (H * .4)) * 8), sx, sy, ex, ey);
+      for (const [cw, dw] of ws) { const [c1, d1] = mul(vr, vi, cw, dw); rama(br + vr, bi + vi, c1, d1); }
+    };
+    rama(b[0], b[1], v[0], v[1]);
+    x.lineCap = 'round'; L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.5 + q * grosor)); x.strokeStyle = c(HUE + 30 + (1 - q) * 20, 60, 38 + (1 - q) * 35, .35 + q * .5); }); x.lineCap = 'butt';
+  }
+  // Árbol de Pitágoras: cuadrados sobre cuadrados; viajamos hacia el cuadrado de la izquierda
+  function pitagorasL(al, vel) {
+    const mul = (a, b, cc, d) => [a * cc - b * d, a * d + b * cc], div = (a, b, cc, d) => { const n = cc * cc + d * d; return [(a * cc + b * d) / n, (b * cc - a * d) / n]; };
+    const wr = Math.cos(al) * Math.cos(al), wi = Math.cos(al) * Math.sin(al), wR = [Math.sin(al) * Math.cos(al - Math.PI / 2), Math.sin(al) * Math.sin(al - Math.PI / 2)];
+    const P = div(0, 1, 1 - wr, -wi), r0 = Math.cos(al), fase = (t * vel * ZOOM) % 1, esc = H * .32 * Math.pow(r0, -fase), ang = -al * fase, Mr = esc * Math.cos(ang), Mi = esc * Math.sin(ang);
+    const pant = (zr, zi) => { const [a, b] = mul(zr - P[0], zi - P[1], Mr, Mi); return [W / 2 + a, H * .5 - b]; };
+    let b = [0, 0], v = [1, 0]; for (let k = 0; k < 6; k++) { b = div(b[0], b[1] - 1, wr, wi); v = div(v[0], v[1], wr, wi); }
+    const L = lotes(); let n = 0;
+    const cuad = (br, bi, vr, vi) => {
+      const lp = Math.hypot(vr, vi) * esc; if (lp < 3 * u || n > 6000) return;
+      const [sx, sy] = pant(br, bi), ext = lp * 4; if (sx + ext < 0 || sx - ext > W || sy + ext < 0 || sy - ext > H) return; n++;
+      const ur = -vi, ui = vr, p0 = [br, bi], p1 = [br + vr, bi + vi], p2 = [br + vr + ur, bi + vi + ui], p3 = [br + ur, bi + ui], k = Math.round(Math.min(1, lp / (H * .35)) * 8), sp = [p0, p1, p2, p3].map(p => pant(...p));
+      for (let i = 0; i < 4; i++) L.tramo(k, ...sp[i], ...sp[(i + 1) % 4]);
+      const [c1, d1] = mul(vr, vi, wr, wi); cuad(p3[0], p3[1], c1, d1); const ap = [p3[0] + c1, p3[1] + d1], [c2, d2] = mul(vr, vi, wR[0], wR[1]); cuad(ap[0], ap[1], c2, d2);
+    };
+    cuad(b[0], b[1], v[0], v[1]);
+    L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.4 + q * 1.2)); x.strokeStyle = c(HUE + 30 + (1 - q) * 20, 60, 40 + (1 - q) * 32, .3 + q * .55); });
+  }
+  // Dragón: la primera mitad es una copia girada 45° y reducida; zoom hacia el inicio
+  function dragonL(vel) {
+    const fase = (t * vel * ZOOM) % 1, ax = W / 2, ay = H / 2, Lg = H * 1.6 * Math.pow(Math.SQRT2, fase), an = -fase * Math.PI / 4 + t * .02, bx = ax + Math.cos(an) * Lg, by = ay + Math.sin(an) * Lg, L = lotes(), min = 5 * u; let n = 0;   // tramos de 5 px: el mismo dibujo con menos trabajo
+    const seg = (x1, y1, x2, y2, sg) => {
+      const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy);
+      if (Math.max(x1, x2) < -l || Math.min(x1, x2) > W + l || Math.max(y1, y2) < -l || Math.min(y1, y2) > H + l) return;
+      if (l < min || n > 7000) { n++; L.tramo(Math.round(Math.min(1, Math.hypot((x1 + x2) / 2 - ax, (y1 + y2) / 2 - ay) / (H * .7)) * 8), x1, y1, x2, y2); return; }
+      const mx = (x1 + x2) / 2 - dy / 2 * sg, my = (y1 + y2) / 2 + dx / 2 * sg; seg(x1, y1, mx, my, 1); seg(mx, my, x2, y2, -1);
+    };
+    seg(ax, ay, bx, by, 1); seg(ax, ay, 2 * ax - bx, 2 * ay - by, 1);
+    L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.7 + (1 - q) * .6)); x.strokeStyle = c(HUE + 30 + q * 30, 65, 70 - q * 28, .85 - q * .45); });
+  }
 
   // Túnel de marcos (esquinas redondeadas)
   const marco = (cx, cy, w, h, a) => { const cs = Math.cos(a), sn = Math.sin(a); return [cx + Math.sign(cs) * Math.pow(Math.abs(cs), .3) * w / 2, cy + Math.sign(sn) * Math.pow(Math.abs(sn), .3) * h / 2]; };
@@ -885,20 +967,20 @@ const Fondo = (() => {
       } },
     { // 50. Doble remolino: dos remolinos que giran en sentidos opuestos y se entrelazan
       cuadro() {
-        nivelesR(4, .12, H * .95, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (1.3 - q * .8), colNivelR(q, .9)); });
-        nivelesR(4, .12, H * .87, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (1.1 - q * .7), colNivelR(q, .7, 180)); }, -1, Math.PI / 4);
+        nivelesR(4, .12, H * .95, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (.5 + q * .8), colNivelR(q, .9)); });
+        nivelesR(4, .12, H * .87, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (.4 + q * .7), colNivelR(q, .7, 180)); }, -1, Math.PI / 4);
       } },
     { // 51. Remolino de círculos: cada uno dentro del anterior, tocándolo en un punto que gira
       cuadro() {
         const k = .86, phi = .45, r0 = H * .9, mod = r0 * (1 - k) / Math.hypot(1 - k * Math.cos(phi), k * Math.sin(phi)), fase = (t * .25) % 1, rot = t * .05;
         for (let i = -3; i < 120; i++) {
           const j = i - fase, esc = Math.pow(k, j), r = r0 * esc; if (r < 2 * u) break; if (r > W * 1.3) continue;
-          const an = rot + j * phi, q = Math.min(1, Math.max(0, j / 30));
-          x.beginPath(); x.arc(W / 2 + Math.cos(an) * mod * esc, H / 2 + Math.sin(an) * mod * esc, r, 0, Math.PI * 2); trazo(u * (1.4 - q * .9), colNivelR(q));
+          const an = rot + j * phi, q = brilloTam(r);
+          x.beginPath(); x.arc(W / 2 + Math.cos(an) * mod * esc, H / 2 + Math.sin(an) * mod * esc, r, 0, Math.PI * 2); trazo(u * (.5 + q * .9), colNivelR(q));
         }
       } },
     { // 52. Remolino de estrellas: estrellas de cinco puntas, una dentro de otra
-      cuadro() { nivelesR(5, .12, H * .9, (j, r, a, q) => { poligonoR(5, r, a, 2); trazo(u * (1.2 - q * .8), colNivelR(q, .9)); }); } },
+      cuadro() { nivelesR(5, .12, H * .9, (j, r, a, q) => { poligonoR(5, r, a, 2); trazo(u * (.5 + q * .7), colNivelR(q, .9)); }); } },
     // ===== Fractales del espacio =====
     { // 53. Galaxia en espiral: los brazos son las curvas de un remolino de ocho lados
       cuadro() {
@@ -928,9 +1010,9 @@ const Fondo = (() => {
         const { k, d } = pasoR(6, .1), fase = (t * .2) % 1, rot0 = t * .05;
         for (let i = -2; i < 260; i++) {
           const j = i - fase, r = H * .95 * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.3) continue;
-          const a = rot0 + j * d * 1.4, q = Math.min(1, Math.max(0, j / 40)), co = Math.cos(a), si = Math.sin(a);
+          const a = rot0 + j * d * 1.4, q = brilloTam(r), co = Math.cos(a), si = Math.sin(a);
           x.beginPath(); Z.k.forEach(([px, py], n) => { const X = px * co - py * si, Y = px * si + py * co; n ? x.lineTo(W / 2 + X * r, H / 2 + Y * r) : x.moveTo(W / 2 + X * r, H / 2 + Y * r); }); x.closePath();
-          trazo(u * (1.2 - q * .8), colNivelR(q, .85));
+          trazo(u * (.5 + q * .7), colNivelR(q, .85));
         }
       } },
     { // 56. Agujero de gusano: anillos que nacen al fondo de un túnel curvo y vienen hacia ti
@@ -939,9 +1021,9 @@ const Fondo = (() => {
         const k = .9, R = H * 1.1, fase = (t * .3) % 1;
         for (let i = -2; i < 120; i++) {
           const j = i - fase, r = R * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.2) continue;
-          const q = Math.min(1, Math.max(0, j / 40)), cx = W / 2 + Math.sin(j * .12 + t * .2) * j * 2.2 * u, cy = H / 2 + Math.cos(j * .09 + t * .15) * j * 1.4 * u;
+          const q = brilloTam(r), cx = W / 2 + Math.sin(j * .12 + t * .2) * j * 2.2 * u, cy = H / 2 + Math.cos(j * .09 + t * .15) * j * 1.4 * u;
           x.beginPath(); x.ellipse(cx, cy, r * 1.3, r * .85, Math.sin(j * .05 + t * .1) * .3, 0, Math.PI * 2);
-          trazo(u * (1.6 - q * 1.1), c(HUE + 200 * q + q * 40, 60, 35 + q * 45, (.25 + q * .6) * Math.min(1, (1 - r / (W * 1.2)) * 3)));
+          trazo(u * (.5 + q * 1.1), c(HUE + 40 * q, 60, 35 + q * 40, .25 + q * .6));
         }
       } },
     { // 57. Disco galáctico: órbitas que giran un poco cada una y forman un remolino
@@ -950,8 +1032,8 @@ const Fondo = (() => {
         const fase = (t * .35) % 1, rot0 = t * .05;
         for (let i = -2; i < 260; i++) {
           const j = i - fase, r = H * 1.05 * Math.pow(.95, j); if (r < 2 * u) break; if (r > W * 1.3) continue;
-          const q = Math.min(1, Math.max(0, j / 40));
-          x.beginPath(); x.ellipse(W / 2, H / 2, r * 1.35, r * .55, rot0 + j * .09, 0, Math.PI * 2); trazo(u * (1.2 - q * .8), colNivelR(q, .8));
+          const q = brilloTam(r);
+          x.beginPath(); x.ellipse(W / 2, H / 2, r * 1.35, r * .55, rot0 + j * .09, 0, Math.PI * 2); trazo(u * (.5 + q * .7), colNivelR(q, .8));
         }
         brilloCentro(H * .12, .6);
       } },
@@ -1012,6 +1094,93 @@ const Fondo = (() => {
         estela(trazar(Z.b, s0, n, .0045, W / 2, H / 2, E), 35, colEstela(0, apaga), anchoEstela);
         x.globalAlpha = apaga; brazosVisibles(Z.b, s0, W / 2, H / 2, E); x.globalAlpha = 1;
       } },
+    // ===== Zoom infinito =====
+    { // 65. Cuadrícula infinita: cada cuadro se divide en cuatro mientras te acercas
+      cuadro() { redInfinita([0, Math.PI / 2], (t * .08 * ZOOM) % 1, H * .12); } },
+    { // 66. Triángulos infinitos: lo mismo con una red de triángulos
+      cuadro() { redInfinita([0, Math.PI / 3, 2 * Math.PI / 3], (t * .08 * ZOOM) % 1, H * .12); } },
+    { // 67. Alfombra infinita: la alfombra de Sierpinski, huecos dentro de huecos
+      cuadro() {
+        const cx = W / 2, cy = H / 2, T = H * .9 * Math.pow(3, (t * .06 * ZOOM) % 1), L = lotes(), min = 5 * u;
+        const celda = (x0, y0, s2) => {
+          if (x0 > W || y0 > H || x0 + s2 < 0 || y0 + s2 < 0) return; const h = s2 / 3; if (h < min) return;
+          const k = Math.round(Math.min(1, h / (H * .5)) * 8);
+          L.tramo(k, x0 + h, y0 + h, x0 + 2 * h, y0 + h); L.tramo(k, x0 + 2 * h, y0 + h, x0 + 2 * h, y0 + 2 * h); L.tramo(k, x0 + 2 * h, y0 + 2 * h, x0 + h, y0 + 2 * h); L.tramo(k, x0 + h, y0 + 2 * h, x0 + h, y0 + h);
+          for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (i !== 1 || j !== 1) celda(x0 + i * h, y0 + j * h, h);
+        };
+        for (let i = -2; i < 2; i++) for (let j = -2; j < 2; j++) celda(cx + i * T, cy + j * T, T);
+        L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.4 + q)); x.strokeStyle = colTam(q); });
+      } },
+    { // 68. Koch infinito: el borde de un copo de nieve, siempre igual por más que te acerques
+      cuadro() {
+        const cx = W / 2, cy = H * .55, X = W * 1.6 * Math.pow(3, (t * .07 * ZOOM) % 1), L = lotes(), min = 3 * u;
+        const koch = (ax, ay, bx, by) => {
+          const dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy);
+          if (Math.max(ax, bx) < -l * .3 || Math.min(ax, bx) > W + l * .3 || Math.max(ay, by) < -l * .3 || Math.min(ay, by) > H + l * .3) return;
+          if (l < min) { L.tramo(Math.round(Math.min(1, Math.hypot((ax + bx) / 2 - cx, (ay + by) / 2 - cy) / (W * .5)) * 8), ax, ay, bx, by); return; }
+          const p1 = [ax + dx / 3, ay + dy / 3], p2 = [ax + dx * 2 / 3, ay + dy * 2 / 3], pk = [p1[0] + dx / 6 + dy * .2887, p1[1] + dy / 6 - dx * .2887];
+          koch(ax, ay, ...p1); koch(...p1, ...pk); koch(...pk, ...p2); koch(...p2, bx, by);
+        };
+        koch(cx, cy, cx + X, cy); koch(cx, cy, cx - X, cy);
+        L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.6 + q * .9)); x.strokeStyle = c(HUE + 30 - q * 20, 65, 70 - q * 25, .85 - q * .4); });
+      } },
+    { // 69. Árbol infinito: viajas hacia la punta de un árbol que nunca se acaba
+      peso: 2,
+      cuadro() { arbolInfinito(.68, .42, .42 * 1.15, .09); } },
+    { // 70. Espiral de burbujas: círculos en espiral que salen del centro
+      cuadro() {
+        const k = .93, al = .5, brazos = 5, fase = (t * .3 * ZOOM) % 1, R0 = H * .9, D = diagonal(), grupos = [];
+        for (let a = 0; a < brazos; a++) for (let i = -3; i < 140; i++) {
+          const j = i - fase, r = R0 * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.1) continue;
+          const an = j * al + a * 2 * Math.PI / brazos + t * .03, q = Math.min(1, r / D), k2 = Math.round(q * 8);
+          (grupos[k2] = grupos[k2] || []).push([W / 2 + Math.cos(an) * r * 1.2, H / 2 + Math.sin(an) * r, r * .16]);
+        }
+        // Los círculos del mismo tamaño se dibujan de una vez
+        grupos.forEach((g, k2) => { if (!g) return; x.beginPath(); for (const [cx, cy, rr] of g) { x.moveTo(cx + rr, cy); x.arc(cx, cy, rr, 0, Math.PI * 2); } const q = k2 / 8; trazo(u * (.4 + q * 1.1), colTam(q)); });
+      } },
+    { // 71. Sierpinski infinito: seis triángulos con un vértice en el centro, en zoom infinito
+      cuadro() {
+        const cx = W / 2, cy = H / 2, Ls = H * .75 * Math.pow(2, (t * .07 * ZOOM) % 1), L = lotes(), min = 7 * u;
+        const tri = (ax, ay, bx, by, cx2, cy2) => {
+          const s2 = Math.hypot(bx - ax, by - ay);
+          if (Math.min(ax, bx, cx2) > W || Math.max(ax, bx, cx2) < 0 || Math.min(ay, by, cy2) > H || Math.max(ay, by, cy2) < 0) return;
+          const k = Math.round(Math.min(1, s2 / (H * (s2 < min * 2 ? .4 : .8))) * 8);
+          if (s2 < min * 2) { L.tramo(k, ax, ay, bx, by); L.tramo(k, bx, by, cx2, cy2); L.tramo(k, cx2, cy2, ax, ay); return; }
+          const m1 = [(ax + bx) / 2, (ay + by) / 2], m2 = [(bx + cx2) / 2, (by + cy2) / 2], m3 = [(ax + cx2) / 2, (ay + cy2) / 2];
+          L.tramo(k, ...m1, ...m2); L.tramo(k, ...m2, ...m3); L.tramo(k, ...m3, ...m1);
+          tri(ax, ay, ...m1, ...m3); tri(...m1, bx, by, ...m2); tri(...m3, ...m2, cx2, cy2);
+        };
+        const rot = t * .02;
+        for (let k = 0; k < 6; k++) { const a1 = rot + k * Math.PI / 3, a2 = a1 + Math.PI / 3; tri(cx, cy, cx + Math.cos(a1) * Ls * 2, cy + Math.sin(a1) * Ls * 2, cx + Math.cos(a2) * Ls * 2, cy + Math.sin(a2) * Ls * 2); }
+        L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.4 + q)); x.strokeStyle = colTam(q); });
+      } },
+    { // 72. Espiral áurea infinita: cuadrados en proporción áurea y su espiral
+      cuadro() {
+        const phi = 1.6180339, fase = (t * .05 * ZOOM) % 1, esc = Math.pow(phi, fase);
+        x.save(); x.translate(W * .5, H * .5); x.rotate(-fase * Math.PI / 2); x.scale(esc, esc);
+        let s2 = H * 2.6, lx = -s2 * .38, ly = -s2 * .62 / phi * .95, dir = 0; const sq = [];
+        for (let k = 0; k < 16; k++) { sq.push([lx, ly, s2, dir]); const ns = s2 / phi; if (dir === 0) lx = lx + s2; else if (dir === 1) { lx = lx + s2 - ns; ly = ly + s2; } else if (dir === 2) { lx = lx - ns; ly = ly + s2 - ns; } else ly = ly - ns; dir = (dir + 1) % 4; s2 = ns; }
+        for (const [a, b, l, d] of sq) {
+          const q = Math.min(1, l * esc / (H * .6));
+          x.beginPath(); x.rect(a, b, l, l); x.lineWidth = Math.max(1, u * (.4 + q * .6)) / esc; x.strokeStyle = c(HUE + 20, 40, 40 + q * 15, .15 + q * .3); x.stroke();
+          const cx2 = [a + l, a + l, a, a][d], cy2 = [b + l, b, b, b + l][d], a0 = [Math.PI, Math.PI * 1.5, 0, Math.PI * .5][d];
+          x.beginPath(); x.arc(cx2, cy2, l, a0, a0 + Math.PI / 2); x.lineWidth = Math.max(1, u * (.6 + q * 1.2)) / esc; x.strokeStyle = colTam(q); x.stroke();
+        }
+        x.restore();
+      } },
+    // ===== Más zoom infinito: árboles y dragón =====
+    { // 73. Árbol que respira: el árbol infinito, con las ramas que se abren y se cierran despacio
+      cuadro() { const a = .42 + .12 * Math.sin(t * .15); arbolGen([[.68, a], [.68, -(a * 1.15)]], .09); } },
+    { // 74. Árbol de tres ramas: cada rama se abre en tres
+      cuadro() { arbolGen([[.5, .95], [.52, .05], [.5, -.85]], .08, { grosor: 2.4 }); } },
+    { // 75. Árbol en espiral: las ramas giran tanto que el viaje se vuelve una espiral
+      cuadro() { arbolGen([[.78, 1.05], [.42, -.7]], .07); } },
+    { // 76. Helecho infinito: un tallo que nunca termina, con hojas que son helechos
+      cuadro() { arbolGen([[.86, .1], [.33, 1.25], [.33, -1.1]], .07, { grosor: 2, esc0: .5 }); } },
+    { // 77. Árbol de Pitágoras: cuadrados sobre cuadrados, en zoom infinito
+      cuadro() { pitagorasL(.62, .08); } },
+    { // 78. Dragón infinito: la curva del dragón, siempre igual por más que te acerques
+      cuadro() { dragonL(.08); } },
   ];
 
   // Sorteo con pesos: Cumbres sale más seguido (sin repetir la misma dos veces seguidas)
