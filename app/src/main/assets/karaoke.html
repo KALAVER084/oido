@@ -240,7 +240,7 @@ function recibir(m) {
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; posLlego = performance.now(); if (m.sonando != null) sonandoK = !!m.sonando; mover(); pintarControles(); }
 }
-// ---------- Fondo animado: 44 animaciones de líneas, tranquilas ----------
+// ---------- Fondo animado: 64 animaciones de líneas, tranquilas ----------
 // Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
@@ -366,6 +366,38 @@ const Fondo = (() => {
       trazo(u * (.4 + d * .9), c(HUE + 200, 45, 30 + d * 28, .2 + d * .5));
     }
   }
+  // Remolinos: cada figura apoya sus vértices en los lados de la anterior (a una fracción f del lado),
+  // así queda un poco más chica y girada. Las figuras nacen en el centro y crecen hacia afuera.
+  const pasoR = (n, f) => { const re = (1 - f) + f * Math.cos(2 * Math.PI / n), im = f * Math.sin(2 * Math.PI / n); return { k: Math.hypot(re, im), d: Math.atan2(im, re) }; };
+  function nivelesR(n, f, R, cb, giro = 1, desfase = 0) {
+    const { k, d } = pasoR(n, f), fase = (t * .25) % 1, rot0 = t * .05 * giro;
+    for (let i = -2; i < 200; i++) {
+      const j = i - fase, r = R * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.2) continue;
+      cb(j, r, rot0 + j * d * giro + desfase, Math.min(1, Math.max(0, j / 40)));
+    }
+  }
+  function poligonoR(n, r, a, salto = 1) { x.beginPath(); for (let m = 0; m <= n; m++) { const an = a + ((m * salto) % n) * 2 * Math.PI / n - Math.PI / 2; const px = W / 2 + Math.cos(an) * r, py = H / 2 + Math.sin(an) * r; m ? x.lineTo(px, py) : x.moveTo(px, py); } x.closePath(); }
+  const colNivelR = (q, a = 1, h = 0) => c(HUE + h + q * 50, 60, 40 + q * 35, (.3 + q * .55) * a);
+  const remolino = (n, f, R, salto = 1) => nivelesR(n, f, R, (j, r, a, q) => { poligonoR(n, r, a, salto); trazo(u * (1.4 - q * .9), colNivelR(q)); });
+
+  // Espacio: estrellas de fondo (fijas, titilan), copo de Koch y brillo del centro
+  function estrellasL(n) {
+    if (!Z.est) Z.est = Array.from({ length: n }, (_, i) => ({ x: Math.abs(Math.sin(i * 12.9898) * 43758.5453) % 1, y: Math.abs(Math.sin(i * 78.233) * 12345.678) % 1, b: Math.abs(Math.sin(i * 3.7)) }));
+    for (const e of Z.est) { x.fillStyle = c(HUE + 30, 40, 85, (.12 + e.b * .4) * (.6 + .4 * Math.sin(t * 1.5 + e.b * 30))); x.fillRect(e.x * W, e.y * H, 1.3 * u, 1.3 * u); }
+  }
+  function kochL(n) {
+    let p = [[0, -1], [Math.sin(2.094), -Math.cos(2.094)], [Math.sin(4.189), -Math.cos(4.189)]]; p.push(p[0]);
+    for (let k = 0; k < n; k++) { const q = []; for (let i = 0; i < p.length - 1; i++) { const [ax, ay] = p[i], [bx, by] = p[i + 1], dx = (bx - ax) / 3, dy = (by - ay) / 3, m1 = [ax + dx, ay + dy], m2 = [ax + 2 * dx, ay + 2 * dy]; q.push(p[i], m1, [m1[0] + dx * .5 + dy * .866, m1[1] + dy * .5 - dx * .866], m2); } q.push(p[p.length - 1]); p = q; }
+    return p;
+  }
+  const brilloCentro = (r, a = .55) => { const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, r); g.addColorStop(0, c(HUE + 40, 80, 82, a)); g.addColorStop(1, c(HUE + 40, 80, 60, 0)); x.fillStyle = g; x.fillRect(0, 0, W, H); };
+  // Epiciclos: posición de la pluma (suma de círculos que giran sobre círculos)
+  const pluma = (brazos, s) => { let px = 0, py = 0; for (const [w, r, f = 0] of brazos) { px += Math.cos(w * s + f) * r; py += Math.sin(w * s + f) * r; } return [px, py]; };
+  function estela(pts, tramos, col, ancho) { const n = pts.length, paso = Math.ceil(n / tramos); for (let a = 0; a < n - 1; a += paso) { x.beginPath(); x.moveTo(...pts[a]); for (let q = a + 1; q <= Math.min(n - 1, a + paso); q++) x.lineTo(...pts[q]); const v = 1 - a / n; trazo(ancho(v), col(v)); } }
+  const colEstela = (h = 0, a = 1) => v => c(HUE + h + 30 + v * 20, 70, 40 + v * 38, v * .85 * a), anchoEstela = v => u * (.5 + v * 1.1);
+  function trazar(brazos, s0, n, dts, cx, cy, E) { const pts = []; for (let k = 0; k < n; k++) { const [px, py] = pluma(brazos, s0 - k * dts); pts.push([cx + px * E, cy + py * E]); } return pts; }
+  function brazosVisibles(brazos, s, cx, cy, E) { let px = cx, py = cy; for (const [w, r, f = 0] of brazos) { const nx = px + Math.cos(w * s + f) * r * E, ny = py + Math.sin(w * s + f) * r * E; x.beginPath(); x.arc(px, py, r * E, 0, Math.PI * 2); trazo(u * .5, c(HUE + 20, 40, 40, .18)); x.beginPath(); x.moveTo(px, py); x.lineTo(nx, ny); trazo(u * .8, c(HUE + 20, 50, 55, .45)); px = nx; py = ny; } x.beginPath(); x.arc(px, py, 2.5 * u, 0, Math.PI * 2); x.fillStyle = c(HUE + 40, 90, 85, .95); x.fill(); }
+
   // Túnel de marcos (esquinas redondeadas)
   const marco = (cx, cy, w, h, a) => { const cs = Math.cos(a), sn = Math.sin(a); return [cx + Math.sign(cs) * Math.pow(Math.abs(cs), .3) * w / 2, cy + Math.sign(sn) * Math.pow(Math.abs(sn), .3) * h / 2]; };
 
@@ -821,7 +853,169 @@ const Fondo = (() => {
           x.strokeStyle = gg; x.lineWidth = Math.max(1, u * (.4 + d * .9)); x.stroke();
         }
       } },
+    // ===== Remolinos (fractales) =====
+    { // 45. Remolino de cuadrados: cada uno gira un poco dentro del anterior; nacen en el centro y se abren
+      cuadro() { remolino(4, .12, H * .95); } },
+    { // 46. Remolino de triángulos
+      cuadro() { remolino(3, .1, H * 1.05); } },
+    { // 47. Remolino de pentágonos
+      cuadro() { remolino(5, .12, H * .9); } },
+    { // 48. Remolino de hexágonos
+      cuadro() { remolino(6, .14, H * .85); } },
+    { // 49. Persecución: las curvas que dibujan las esquinas al girar (cuatro espirales)
+      cuadro() {
+        nivelesR(4, .12, H * .95, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * .6, colNivelR(q, .35)); });
+        const { k, d } = pasoR(4, .12), fase = (t * .25) % 1, rot0 = t * .05;
+        for (let m = 0; m < 4; m++) {
+          x.beginPath(); let primero = true;
+          for (let j = -2; j < 70; j += .15) { const jj = j - fase, r = H * .95 * Math.pow(k, jj); if (r < 2 * u) break; const an = rot0 + jj * d + m * Math.PI / 2 - Math.PI / 2, px = W / 2 + Math.cos(an) * r, py = H / 2 + Math.sin(an) * r; primero ? x.moveTo(px, py) : x.lineTo(px, py); primero = false; }
+          trazo(u * 1.3, c(HUE + 30, 75, 66, .8));
+        }
+      } },
+    { // 50. Doble remolino: dos remolinos que giran en sentidos opuestos y se entrelazan
+      cuadro() {
+        nivelesR(4, .12, H * .95, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (1.3 - q * .8), colNivelR(q, .9)); });
+        nivelesR(4, .12, H * .87, (j, r, a, q) => { poligonoR(4, r, a); trazo(u * (1.1 - q * .7), colNivelR(q, .7, 180)); }, -1, Math.PI / 4);
+      } },
+    { // 51. Remolino de círculos: cada uno dentro del anterior, tocándolo en un punto que gira
+      cuadro() {
+        const k = .86, phi = .45, r0 = H * .9, mod = r0 * (1 - k) / Math.hypot(1 - k * Math.cos(phi), k * Math.sin(phi)), fase = (t * .25) % 1, rot = t * .05;
+        for (let i = -3; i < 120; i++) {
+          const j = i - fase, esc = Math.pow(k, j), r = r0 * esc; if (r < 2 * u) break; if (r > W * 1.3) continue;
+          const an = rot + j * phi, q = Math.min(1, Math.max(0, j / 30));
+          x.beginPath(); x.arc(W / 2 + Math.cos(an) * mod * esc, H / 2 + Math.sin(an) * mod * esc, r, 0, Math.PI * 2); trazo(u * (1.4 - q * .9), colNivelR(q));
+        }
+      } },
+    { // 52. Remolino de estrellas: estrellas de cinco puntas, una dentro de otra
+      cuadro() { nivelesR(5, .12, H * .9, (j, r, a, q) => { poligonoR(5, r, a, 2); trazo(u * (1.2 - q * .8), colNivelR(q, .9)); }); } },
+    // ===== Fractales del espacio =====
+    { // 53. Galaxia en espiral: los brazos son las curvas de un remolino de ocho lados
+      cuadro() {
+        estrellasL(70);
+        const n = 8, { k, d } = pasoR(n, .05), R = H * 1.1, fase = (t * .12) % 1, rot0 = t * .04;
+        for (let m = 0; m < n; m++) {
+          const pts = [];
+          for (let j = -1; j < 220; j += .25) { const jj = j - fase, r = R * Math.pow(k, jj); if (r < 2 * u) break; const an = rot0 + jj * d + m * 2 * Math.PI / n; pts.push([W / 2 + Math.cos(an) * r * 1.35, H / 2 + Math.sin(an) * r * .62, r]); }
+          for (let a = 0; a < pts.length - 1; a += 6) { x.beginPath(); x.moveTo(pts[a][0], pts[a][1]); for (let q = a + 1; q <= Math.min(pts.length - 1, a + 6); q++) x.lineTo(pts[q][0], pts[q][1]); const cer = 1 - Math.min(1, pts[a][2] / R); trazo(u * (.6 + cer * .8), c(HUE + 30 + cer * 20, 65, 40 + cer * 40, .2 + cer * .6)); }
+        }
+        brilloCentro(H * .16);
+      } },
+    { // 54. Epiciclos: círculos que giran sobre círculos y dibujan su estela
+      cuadro() {
+        estrellasL(60);
+        const brazos = [[1, .3], [-3.02, .14], [7.01, .06], [-15.03, .025]], cx = W / 2, cy = H / 2, E = H * 1.05, s0 = t * .08, pts = [];
+        for (let k = 0; k < 1400; k++) { const [px, py] = pluma(brazos, s0 - k * .0045); pts.push([cx + px * E, cy + py * E]); }
+        estela(pts, 35, v => c(HUE + 30 + v * 20, 70, 40 + v * 38, v * .85), v => u * (.5 + v * 1.1));
+        brazosVisibles(brazos, s0, cx, cy, E);
+      } },
+    { // 55. Copos estelares: copos de Koch anidados que giran y se abren hacia afuera
+      cuadro() {
+        estrellasL(60); if (!Z.k) Z.k = kochL(2);
+        const { k, d } = pasoR(6, .1), fase = (t * .2) % 1, rot0 = t * .05;
+        for (let i = -2; i < 260; i++) {
+          const j = i - fase, r = H * .95 * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.3) continue;
+          const a = rot0 + j * d * 1.4, q = Math.min(1, Math.max(0, j / 40)), co = Math.cos(a), si = Math.sin(a);
+          x.beginPath(); Z.k.forEach(([px, py], n) => { const X = px * co - py * si, Y = px * si + py * co; n ? x.lineTo(W / 2 + X * r, H / 2 + Y * r) : x.moveTo(W / 2 + X * r, H / 2 + Y * r); }); x.closePath();
+          trazo(u * (1.2 - q * .8), colNivelR(q, .85));
+        }
+      } },
+    { // 56. Agujero de gusano: anillos que nacen al fondo de un túnel curvo y vienen hacia ti
+      cuadro() {
+        estrellasL(50);
+        const k = .9, R = H * 1.1, fase = (t * .3) % 1;
+        for (let i = -2; i < 120; i++) {
+          const j = i - fase, r = R * Math.pow(k, j); if (r < 2 * u) break; if (r > W * 1.2) continue;
+          const q = Math.min(1, Math.max(0, j / 40)), cx = W / 2 + Math.sin(j * .12 + t * .2) * j * 2.2 * u, cy = H / 2 + Math.cos(j * .09 + t * .15) * j * 1.4 * u;
+          x.beginPath(); x.ellipse(cx, cy, r * 1.3, r * .85, Math.sin(j * .05 + t * .1) * .3, 0, Math.PI * 2);
+          trazo(u * (1.6 - q * 1.1), c(HUE + 200 * q + q * 40, 60, 35 + q * 45, (.25 + q * .6) * Math.min(1, (1 - r / (W * 1.2)) * 3)));
+        }
+      } },
+    { // 57. Disco galáctico: órbitas que giran un poco cada una y forman un remolino
+      cuadro() {
+        estrellasL(70);
+        const fase = (t * .35) % 1, rot0 = t * .05;
+        for (let i = -2; i < 260; i++) {
+          const j = i - fase, r = H * 1.05 * Math.pow(.95, j); if (r < 2 * u) break; if (r > W * 1.3) continue;
+          const q = Math.min(1, Math.max(0, j / 40));
+          x.beginPath(); x.ellipse(W / 2, H / 2, r * 1.35, r * .55, rot0 + j * .09, 0, Math.PI * 2); trazo(u * (1.2 - q * .8), colNivelR(q, .8));
+        }
+        brilloCentro(H * .12, .6);
+      } },
+    // ===== Epiciclos: círculos que giran sobre círculos =====
+    { // 58. Espirógrafo: una rueda gira dentro de otra y dibuja una flor que va cambiando
+      cuadro() {
+        estrellasL(50);
+        const r = .38 + .07 * Math.sin(t * .02), d = .32, cx = W / 2, cy = H / 2, E = H * .42, s0 = t * .35, pts = [];
+        for (let k = 0; k < 1600; k++) { const s2 = s0 - k * .012; pts.push([cx + ((1 - r) * Math.cos(s2) + d * Math.cos((1 - r) / r * s2)) * E * 1.2, cy + ((1 - r) * Math.sin(s2) - d * Math.sin((1 - r) / r * s2)) * E]); }
+        estela(pts, 40, colEstela(), anchoEstela);
+      } },
+    { // 59. Rosa: tres círculos en proporción exacta dibujan una rosa de seis pétalos
+      cuadro() { estrellasL(50); const b = [[1, .28], [-5, .12], [7, .05]], E = H * 1.15, s0 = t * .12; estela(trazar(b, s0, 1500, .0042, W / 2, H / 2, E), 35, colEstela(), anchoEstela); brazosVisibles(b, s0, W / 2, H / 2, E); } },
+    { // 60. Doble pluma: dos epiciclos en espejo, de dos colores
+      cuadro() {
+        estrellasL(50);
+        const A = [[1, .26], [-3.01, .12], [7.02, .05]], B = [[-1, .26], [3.01, .12], [-7.02, .05]], E = H * 1.05, s0 = t * .09;
+        estela(trazar(A, s0, 1200, .005, W / 2, H / 2, E), 30, colEstela(), anchoEstela); estela(trazar(B, s0 + .8, 1200, .005, W / 2, H / 2, E), 30, colEstela(170), anchoEstela);
+        brazosVisibles(A, s0, W / 2, H / 2, E); brazosVisibles(B, s0 + .8, W / 2, H / 2, E);
+      } },
+    { // 61. Lunas: un planeta en su órbita y sus lunas dando vueltas a su alrededor
+      cuadro() {
+        estrellasL(70);
+        const cx = W / 2, cy = H / 2, orb = .36, E = H * 1.15, s0 = t * .05;
+        const g = x.createRadialGradient(cx, cy, 0, cx, cy, 22 * u); g.addColorStop(0, c(HUE + 40, 90, 82, .9)); g.addColorStop(1, c(HUE + 40, 90, 60, 0)); x.fillStyle = g; x.fillRect(cx - 22 * u, cy - 22 * u, 44 * u, 44 * u);
+        x.beginPath(); x.ellipse(cx, cy, orb * E * 1.3, orb * E * .55, 0, 0, Math.PI * 2); trazo(u * .6, c(HUE + 20, 40, 40, .22));
+        for (const [w, r, h] of [[13, .05, 0], [-21, .03, 60], [31, .017, 140]]) { const pts = []; for (let k = 0; k < 900; k++) { const s2 = s0 - k * .0016; pts.push([cx + (Math.cos(s2) * orb * 1.3 + Math.cos(w * s2) * r * 1.3) * E, cy + (Math.sin(s2) * orb * .55 + Math.sin(w * s2) * r * .55) * E]); } estela(pts, 30, colEstela(h), v => u * (.4 + v * .9)); }
+        x.beginPath(); x.arc(cx + Math.cos(s0) * orb * E * 1.3, cy + Math.sin(s0) * orb * E * .55, 4 * u, 0, Math.PI * 2); trazo(u * 1.4, c(HUE + 190, 60, 70, .9));
+      } },
+    { // 62. Engranajes: se ven las ruedas dentadas que giran y la punta que dibuja
+      cuadro() {
+        estrellasL(40);
+        const b = [[1, .25], [-2.5, .12], [6.25, .05]], E = H * 1.15, s0 = t * .12, cx = W / 2, cy = H / 2;
+        estela(trazar(b, s0, 1300, .005, cx, cy, E), 35, colEstela(), anchoEstela);
+        let px = cx, py = cy;
+        for (const [w, r] of b) {
+          x.beginPath(); x.arc(px, py, r * E, 0, Math.PI * 2); trazo(u, c(HUE + 20, 45, 45, .45));
+          for (let k = 0; k < 24; k++) { const a = w * s0 + k * Math.PI / 12; x.beginPath(); x.moveTo(px + Math.cos(a) * r * E, py + Math.sin(a) * r * E); x.lineTo(px + Math.cos(a) * (r * E + 4 * u), py + Math.sin(a) * (r * E + 4 * u)); trazo(u * .8, c(HUE + 20, 45, 45, .4)); }
+          const nx = px + Math.cos(w * s0) * r * E, ny = py + Math.sin(w * s0) * r * E; x.beginPath(); x.moveTo(px, py); x.lineTo(nx, ny); trazo(u * .8, c(HUE + 20, 50, 55, .5)); px = nx; py = ny;
+        }
+        x.beginPath(); x.arc(px, py, 3 * u, 0, Math.PI * 2); x.fillStyle = c(HUE + 40, 90, 85, .95); x.fill();
+      } },
+    { // 63. Estrella dibujada: muchos círculos girando juntos dibujan una estrella
+      crear() {
+        const N = 256, pts = [];
+        for (let i = 0; i < N; i++) { const k = Math.floor(i / (N / 10)), q = (i % (N / 10)) / (N / 10), r0 = k % 2 ? .45 : 1, r1 = k % 2 ? 1 : .45, r = r0 + (r1 - r0) * q, an = (k + q) * Math.PI * 2 / 10; pts.push([Math.cos(an - Math.PI / 2) * r, Math.sin(an - Math.PI / 2) * r]); }
+        const co = [];
+        for (let f = -20; f <= 20; f++) { let re = 0, im = 0; for (let i = 0; i < N; i++) { const a = -2 * Math.PI * f * i / N; re += pts[i][0] * Math.cos(a) - pts[i][1] * Math.sin(a); im += pts[i][0] * Math.sin(a) + pts[i][1] * Math.cos(a); } co.push([f, Math.hypot(re, im) / N, Math.atan2(im, re)]); }
+        co.sort((a, b) => b[1] - a[1]); Z.f = co.slice(0, 24);
+      },
+      cuadro() { estrellasL(50); const E = H * .36, s0 = t * .25; estela(trazar(Z.f, s0, 700, .009, W / 2, H / 2, E), 30, colEstela(), anchoEstela); brazosVisibles(Z.f, s0, W / 2, H / 2, E); } },
+    { // 64. Figura cambiante: cada 24 s una combinación nueva de círculos se dibuja, se apaga y cambia
+      cuadro() {
+        estrellasL(50);
+        const ciclo = 24, f = t % ciclo, sem = Math.floor(t / ciclo);
+        if (Z.sem !== sem) { Z.sem = sem; const r = a => { const v = Math.sin(sem * 12.9 + a) * 43758.5453; return v - Math.floor(v); }; const n = 3 + Math.floor(r(1) * 2), b = []; let rad = .3; for (let k = 0; k < n; k++) { b.push([(k % 2 ? -1 : 1) * (1 + Math.floor(r(k + 2) * 6) * (k + 1)) + .01 * k, rad]); rad *= .42 + r(k + 9) * .15; } Z.b = b; }
+        const ver = Math.min(1, f / 14), apaga = f > ciclo - 3 ? (ciclo - f) / 3 : Math.min(1, f * 2), E = H * 1.05, s0 = t * .07, n = Math.floor(1500 * ver) + 2;
+        estela(trazar(Z.b, s0, n, .0045, W / 2, H / 2, E), 35, colEstela(0, apaga), anchoEstela);
+        x.globalAlpha = apaga; brazosVisibles(Z.b, s0, W / 2, H / 2, E); x.globalAlpha = 1;
+      } },
   ];
+
+  // Sorteo con pesos: Cumbres sale más seguido (sin repetir la misma dos veces seguidas)
+  function elegir() {
+    const pesos = EF.map(e => e.peso || 1), total = pesos.reduce((a, b) => a + b, 0);
+    let n; do { let r = Math.random() * total; n = 0; while ((r -= pesos[n]) > 0) n++; } while (n === ef && EF.length > 1);
+    ef = n; Z = {}; olas = []; patada = 0; desdeCambio = t;
+    if (EF[ef].crear) EF[ef].crear();
+  }
+  // En vivo (transmisiones de horas): otra animación cada 4 minutos, con un fundido suave
+  const CAMBIO_EN_VIVO = 240;
+  let vivo = false, desdeCambio = 0, cambiando = false;
+  function revisarEnVivo() {
+    if (!vivo || cambiando || t - desdeCambio < CAMBIO_EN_VIVO) return;
+    cambiando = true;
+    cv.style.transition = 'opacity 1.5s ease'; cv.style.opacity = '0';
+    setTimeout(() => { elegir(); cv.style.opacity = '1'; setTimeout(() => { cambiando = false; }, 1600); }, 1500);
+  }
 
   function tamano() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2), w = Math.min(1920, Math.round(innerWidth * dpr));
@@ -834,7 +1028,7 @@ const Fondo = (() => {
     const dt = Math.min(.1, (ahora - ultimo) / 1000); ultimo = ahora;
     if (innerWidth === 0 || innerHeight === 0) return;
     if (W !== Math.min(1920, Math.round(innerWidth * Math.min(window.devicePixelRatio || 1, 2)))) tamano();
-    t += dt; sonido(dt);
+    t += dt; sonido(dt); revisarEnVivo();
     if (ef < 0) return;
     x.globalAlpha = 1; x.fillStyle = FON; x.fillRect(0, 0, W, H);
     EF[ef].cuadro(dt);
@@ -859,11 +1053,7 @@ const Fondo = (() => {
       const k = (m.titulo || '') + '|' + (m.canal || '');
       if (k === clave) return;          // misma canción (llegó la letra o cambió el tema): misma animación
       clave = k;
-      // Sorteo con pesos: Cumbres sale más seguido (sin repetir la misma dos veces seguidas)
-      const pesos = EF.map(e => e.peso || 1), total = pesos.reduce((a, b) => a + b, 0);
-      let n; do { let r = Math.random() * total; n = 0; while ((r -= pesos[n]) > 0) n++; } while (n === ef && EF.length > 1);
-      ef = n; Z = {}; olas = []; patada = 0;
-      if (EF[ef].crear) EF[ef].crear();
+      vivo = !!m.vivo; elegir();
     },
     // 16 bandas del sonido que está sonando (0..1)
     // Verso nuevo de la letra sincronizada: cada animación hace su reacción
