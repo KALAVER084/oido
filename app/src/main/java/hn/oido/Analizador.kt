@@ -30,7 +30,7 @@ object Analizador : TeeAudioProcessor.AudioBufferSink {
 
     private const val N = 1024                  // muestras por análisis
     private const val BANDAS = 16
-    private const val RETRASO_MS = 140L         // el audio llega al analizador un poco antes de sonar
+    private const val RETRASO_MS = 0L           // la espera la maneja el karaoke (ajustable desde la app)
 
     private val principal = Handler(Looper.getMainLooper())
     private var frecuencia = 44100
