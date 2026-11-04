@@ -242,7 +242,7 @@ function recibir(m) {
   else if (m.tipo === 'tema') { aplicarColores(m.tema); Fondo.colores(m.tema); if (cancion) cancion.tema = m.tema; }
   else if (m.tipo === 'pos') { pos = m.pos || 0; dur = m.dur || 0; posLlego = performance.now(); if (m.sonando != null) sonandoK = !!m.sonando; mover(); pintarControles(); }
 }
-// ---------- Fondo animado: 78 animaciones de líneas, tranquilas ----------
+// ---------- Fondo animado: 77 animaciones de líneas, tranquilas ----------
 // Se mueven solas; con letra sincronizada, cada verso nuevo dispara la reacción de la animación (Fondo.destello()).
 const Fondo = (() => {
   const cv = $('#fondo'), x = cv.getContext('2d');
@@ -480,11 +480,13 @@ const Fondo = (() => {
   }
   // Dragón: la primera mitad es una copia girada 45° y reducida; zoom hacia el inicio
   function dragonL(vel) {
-    const fase = (t * vel * ZOOM) % 1, ax = W / 2, ay = H / 2, Lg = H * 1.6 * Math.pow(Math.SQRT2, fase), an = -fase * Math.PI / 4 + t * .02, bx = ax + Math.cos(an) * Lg, by = ay + Math.sin(an) * Lg, L = lotes(), min = 5 * u; let n = 0;   // tramos de 5 px: el mismo dibujo con menos trabajo
+    const fase = (t * vel * ZOOM) % 1, ax = W / 2, ay = H / 2, Lg = H * 1.6 * Math.pow(Math.SQRT2, fase), an = -fase * Math.PI / 4 + t * .02, bx = ax + Math.cos(an) * Lg, by = ay + Math.sin(an) * Lg, L = lotes(), min = 3 * u; let n = 0;
     const seg = (x1, y1, x2, y2, sg) => {
       const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy);
       if (Math.max(x1, x2) < -l || Math.min(x1, x2) > W + l || Math.max(y1, y2) < -l || Math.min(y1, y2) > H + l) return;
-      if (l < min || n > 7000) { n++; L.tramo(Math.round(Math.min(1, Math.hypot((x1 + x2) / 2 - ax, (y1 + y2) / 2 - ay) / (H * .7)) * 8), x1, y1, x2, y2); return; }
+      // Detalle fino cerca del centro (donde está el zoom) y más grueso hacia los bordes
+      const dist = Math.hypot((x1 + x2) / 2 - ax, (y1 + y2) / 2 - ay);
+      if (l < min * (1 + dist / (H * .35))) { if (n < 9000) { n++; L.tramo(Math.round(Math.min(1, dist / (H * .7)) * 8), x1, y1, x2, y2); } return; }
       const mx = (x1 + x2) / 2 - dy / 2 * sg, my = (y1 + y2) / 2 + dx / 2 * sg; seg(x1, y1, mx, my, 1); seg(mx, my, x2, y2, -1);
     };
     seg(ax, ay, bx, by, 1); seg(ax, ay, 2 * ax - bx, 2 * ay - by, 1);
@@ -806,11 +808,11 @@ const Fondo = (() => {
           x.closePath(); trazo(u * (.4 + z * 1.6), c(HUE + z * 40, 60, 40 + z * 30, Math.sin(z * Math.PI) * .75));
         }
       } },
-    { // 36. Raíces al viento: crecen, se ramifican y se mecen (las puntas más que la base)
+    { // 36. Raíces al viento: crecen, se ramifican y se quedan meciéndose (las puntas más que la base)
       cuadro() {
-        const ciclo = 24, fase = t % ciclo, n = Math.floor(t / ciclo);
-        if (!Z.arb || Z.ciclo !== n) { Z.ciclo = n; Z.arb = [0, 1, 2].map(i => ({ x: W * (.3 + i * .2), n: arbolL(7, H * .2, u * 2.4, i * .8) })); }
-        const apaga = fase > ciclo - 3 ? (ciclo - fase) / 3 : 1, viento = (prof, x0) => (Math.sin(t * .9 + x0 * .004 + prof * .45) * .045 + Math.sin(t * 2.1 + prof) * .012) * prof;
+        // Crece una sola vez y se queda, meciéndose con el viento
+        if (!Z.arb) { Z.t0 = t; Z.arb = [0, 1, 2].map(i => ({ x: W * (.3 + i * .2), n: arbolL(7, H * .2, u * 2.4, i * .8) })); }
+        const fase = t - Z.t0, apaga = 1, viento = (prof, x0) => (Math.sin(t * .9 + x0 * .004 + prof * .45) * .045 + Math.sin(t * 2.1 + prof) * .012) * prof;
         const L = lotes(); for (const a of Z.arb) dibujarArbolL(a.n, a.x, H * 1.02, -Math.PI / 2, 0, fase, apaga, viento, L);
         x.lineCap = 'round';
         L.dibujar(cl => { const prof = Math.floor(cl / 10), alt = (cl % 10) / 4; x.lineWidth = Math.max(1, u * 2.4 * Math.pow(.7, prof)); x.strokeStyle = c(HUE + 20 + alt * 30, 55, 35 + alt * 40, (.35 + alt * .5) * apaga); });
@@ -905,23 +907,6 @@ const Fondo = (() => {
           }
           x.fill();
           x.globalAlpha = 1;
-        }
-      } },
-    { // 42. Rascacielos: mirar hacia arriba entre torres de luz
-      cuadro() {
-        const cx = W * .5, cy = -H * .4, N = 9;
-        for (let k = 0; k < N; k++) {
-          const ang = (k / (N - 1) - .5) * 2.2 + Math.sin(t * .05) * .05, anch = .07 + .03 * Math.sin(k * 1.7);
-          for (const e of [ang - anch, ang + anch]) {
-            x.beginPath(); x.moveTo(cx + Math.sin(e) * W * 1.3, H * 1.05); x.lineTo(cx + Math.sin(e) * W * .08, cy + H * .55);
-            const g = x.createLinearGradient(0, H, 0, 0); g.addColorStop(0, c(HUE, 35, 30, .3)); g.addColorStop(1, c(HUE + 30, 70, 70, .85));
-            x.strokeStyle = g; x.lineWidth = Math.max(1, u * 1.1); x.stroke();
-          }
-          for (let p = 1; p < 9; p++) {
-            const q = Math.pow(p / 9, 1.6), y = H * 1.05 - (H * 1.05 - (cy + H * .55)) * q;
-            x.beginPath(); x.moveTo(cx + Math.sin(ang - anch) * W * (1.3 - 1.22 * q), y); x.lineTo(cx + Math.sin(ang + anch) * W * (1.3 - 1.22 * q), y);
-            trazo(u * .5, c(HUE + 20, 45, 45, .15 + .25 * Math.max(0, Math.sin(t * .3 + k + p))));
-          }
         }
       } },
     { // 43. Velero: un velero cruza despacio sobre el oleaje
