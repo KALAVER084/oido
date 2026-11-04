@@ -28,7 +28,6 @@
   .en-vivo { display: inline-flex; align-items: center; gap: .5em; font-size: 2.4vmin; letter-spacing: .12em; font-weight: 600; color: var(--acento, #fff); }
   .en-vivo::before { content: ''; width: .7em; height: .7em; border-radius: 50%; background: currentColor; animation: latido 1.6s ease-in-out infinite; }
   @keyframes latido { 50% { opacity: .35; } }
-  body.vivo .bar { display: none; }
   /* Salir: aparece al tocar la pantalla */
   #salir { position: fixed; top: 3vmin; right: 3vmin; z-index: 5; width: 9vmin; height: 9vmin; min-width: 44px; min-height: 44px;
     border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 5vmin; line-height: 1; cursor: pointer;
@@ -70,6 +69,9 @@
   .bar { display: flex; align-items: center; gap: 2vw; font-size: 2.4vmin; color: var(--suave); font-variant-numeric: tabular-nums; }
   .trk { flex: 1; height: .7vmin; min-height: 3px; border-radius: 99px; background: var(--linea); overflow: hidden; }
   #prog { height: 100%; width: 0; background: var(--acento); transition: width .25s linear; }
+  /* Al final, para que siempre ganen: lo oculto se oculta */
+  .en-vivo[hidden] { display: none; }
+  body.vivo .bar { display: none; }
 </style>
 </head>
 <body>

@@ -1148,8 +1148,8 @@ barra.addEventListener('change', () => { reproductor.irA(+barra.value); arrastra
 // Android avisa el estado del reproductor varias veces por segundo
 window.__estado = s => {
   const r = $('#reproductor');
-  if (!s.hay) { r.classList.remove('activo'); return; }
-  r.classList.add('activo');
+  if (!s.hay) { r.classList.remove('activo'); actualizarKaraokeLocal(); return; }
+  if (!r.classList.contains('activo')) { r.classList.add('activo'); actualizarKaraokeLocal(); }
   if (cola && cola.i !== s.index) { cola.i = s.index; pintar(); }
   $('#ahora').textContent = (s.error ? t('noCargar') : s.cargando ? t('cargandoDos') : '') + s.titulo;
   const origen = nombreOrigen();
@@ -1656,14 +1656,16 @@ function enviarKaraoke(m) {
 function karaokeCancion() {
   if (hayKaraoke()) enviarKaraoke(datosKaraoke());
 }
-// Teléfono en horizontal + letra a pantalla completa = modo karaoke (solo Android)
+// Teléfono en horizontal con algo sonando = modo karaoke, con o sin letra (solo Android)
 // Botón de karaoke: lo abre directo (el teléfono gira solo a horizontal).
 // Tras salir con × o "atrás", girar no lo vuelve a abrir hasta que el teléfono vuelva a vertical.
 let karaokeForzado = false, salidaManual = false;
 function actualizarKaraokeLocal() {
   if (!horizontal.matches) salidaManual = false;
   // Con una tele conectada el karaoke va en la tele: el teléfono sigue siendo el control
-  const activo = esAndroid && !pantallaExterna && (karaokeForzado || (pantallaLetra && horizontal.matches && !salidaManual));
+  // Girar el teléfono abre el karaoke si está sonando algo, haya letra o no
+  const sonando = $('#reproductor').classList.contains('activo') && !!(cola && cola.items[cola.i]);
+  const activo = esAndroid && !pantallaExterna && (karaokeForzado || (sonando && horizontal.matches && !salidaManual));
   pintarBotonKaraoke();
   if (activo === karaokeLocalActivo) return;
   karaokeLocalActivo = activo;
