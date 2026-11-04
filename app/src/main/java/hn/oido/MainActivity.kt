@@ -478,7 +478,11 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface fun karaokeLocal(activo: Boolean) {
             main.post {
                 if (activo && karaokeLocal == null) {
-                    val v = VistaKaraoke(this@MainActivity) { js("window.__karaokeListo && window.__karaokeListo()") }
+                    val v = VistaKaraoke(
+                        this@MainActivity,
+                        alListo = { js("window.__karaokeListo && window.__karaokeListo()") },
+                        alSalir = { js("window.__salirKaraoke && window.__salirKaraoke()") },
+                    )
                     marco.addView(v.web, FrameLayout.LayoutParams(-1, -1))
                     karaokeLocal = v
                 } else if (!activo) {
@@ -498,6 +502,17 @@ class MainActivity : ComponentActivity() {
                 requestedOrientation = if (abierta) ActivityInfo.SCREEN_ORIENTATION_SENSOR
                 else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 actualizarPantallaEncendida()
+            }
+        }
+
+        /** Botón de karaoke: gira la pantalla a horizontal al entrar; al salir vuelve a como estaba. */
+        @JavascriptInterface fun orientacionKaraoke(horizontal: Boolean) {
+            main.post {
+                requestedOrientation = when {
+                    horizontal -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    letraAbierta -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                    else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
             }
         }
 

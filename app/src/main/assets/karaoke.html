@@ -24,6 +24,16 @@
     font: 16px/1.25 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
   }
   #fondo { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  /* En vivo: etiqueta en lugar de la barra de tiempo */
+  .en-vivo { display: inline-flex; align-items: center; gap: .5em; font-size: 2.4vmin; letter-spacing: .12em; font-weight: 600; color: var(--acento, #fff); }
+  .en-vivo::before { content: ''; width: .7em; height: .7em; border-radius: 50%; background: currentColor; animation: latido 1.6s ease-in-out infinite; }
+  @keyframes latido { 50% { opacity: .35; } }
+  body.vivo .bar { display: none; }
+  /* Salir: aparece al tocar la pantalla */
+  #salir { position: fixed; top: 3vmin; right: 3vmin; z-index: 5; width: 9vmin; height: 9vmin; min-width: 44px; min-height: 44px;
+    border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 5vmin; line-height: 1; cursor: pointer;
+    transition: opacity .3s; }
+  #salir.oculto { opacity: 0; pointer-events: none; }
   #rollo .l { text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
   #k { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; padding: 4vh 5vw 5vh; }
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4vw; }
@@ -64,6 +74,7 @@
 </head>
 <body>
 <canvas id="fondo" aria-hidden="true"></canvas>
+<button id="salir" type="button" aria-label="Salir" hidden>×</button>
 <div id="k">
   <div class="top">
     <div><div id="tit"></div><div id="art"></div></div>
@@ -87,6 +98,7 @@
   </div>
 
   <div class="bar"><span id="pos">0:00</span><div class="trk"><div id="prog"></div></div><span id="dur"></span></div>
+  <div class="en-vivo" id="vivo" hidden>EN VIVO</div>
 </div>
 <script>
 const $ = s => document.querySelector(s);
@@ -112,6 +124,10 @@ function pintar() {
   aplicarColores(c.tema);
   $('#tit').textContent = c.titulo || '';
   $('#fija-nota').textContent = (c.textos && c.textos.fija) || 'Letra sin sincronizar';
+  $('#vivo').textContent = (c.textos && c.textos.vivo) || 'EN VIVO';
+  $('#vivo').hidden = !c.vivo;
+  document.body.classList.toggle('vivo', !!c.vivo);
+  $('#salir').setAttribute('aria-label', (c.textos && c.textos.salir) || 'Salir');
   $('#art').textContent = c.canal || '';
   $('#solo-tit').textContent = c.titulo || 'Oído';
   $('#solo-art').textContent = c.canal || '';
@@ -497,6 +513,17 @@ const Fondo = (() => {
     total: () => EF.length,
   };
 })();
+
+// Salir del karaoke: al tocar la pantalla aparece la ×, y se esconde sola a los 3 s.
+// En el teléfono avisa a la app; en la PC cierra la ventana del karaoke. En la tele nadie toca la pantalla.
+let ocultarSalir = 0;
+function mostrarSalir() {
+  const b = $('#salir'); b.hidden = false; b.classList.remove('oculto');
+  clearTimeout(ocultarSalir); ocultarSalir = setTimeout(() => b.classList.add('oculto'), 3000);
+}
+addEventListener('pointerdown', e => { if (e.target.id !== 'salir') mostrarSalir(); });
+addEventListener('mousemove', mostrarSalir);
+$('#salir').onclick = () => { if (window.OidoKaraoke) window.OidoKaraoke.salir(); else window.close(); };
 
 window.__karaoke = recibir;                                // tele: lo llama Android
 window.addEventListener('message', e => recibir(e.data));  // teléfono: lo manda la app

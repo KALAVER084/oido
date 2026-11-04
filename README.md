@@ -41,7 +41,7 @@ Oído hace una sola cosa: **buscar en YouTube y reproducir solo el audio**.
 - **Sin anuncios:** nunca carga páginas ni el reproductor de YouTube; pide el audio directo.
 - **Tus listas:** crea, ordena y reproduce listas propias. Guárdalas como copia (por ejemplo en Google Drive) o envíalas por WhatsApp o correo para pasarlas a otro teléfono.
 - **Letras sincronizadas:** si la canción tiene letra, la muestra al ritmo de la música, en una franja o a pantalla completa. Si la versión no coincide (en vivo, videoclip con intro), la muestra fija para que nunca vaya desfasada.
-- **Modo karaoke:** con una tele conectada (cable, dock o Miracast) la letra aparece en grande en la tele mientras usas el teléfono normal. Con cualquier otra forma de duplicar pantalla, abre la letra a pantalla completa y gira el teléfono. De fondo, una de **23 animaciones de líneas** que se mueven solas; con letra sincronizada, cada verso nuevo dispara su reacción (una ola, una gota, un arpegio…).
+- **Modo karaoke:** con una tele conectada (cable, dock o Miracast) la letra aparece en grande en la tele mientras usas el teléfono normal. En el teléfono, toca el botón de karaoke (micrófono con letra, ondas sin letra): funciona con cualquier canción, incluso sin letra o en vivo, y gira la pantalla solo. De fondo, una de **23 animaciones de líneas** que se mueven solas y, con letra sincronizada, reaccionan a cada verso.
 - **En vivo:** transmisiones como Lofi Girl, en la calidad más baja para gastar pocos datos.
 - **Compartir:** copia el enlace de cualquier audio, mix o lista.
 - **Tema a tu gusto:** eliges un color y la app ajusta fondo, texto y acentos, o activas el modo **Dinámico** para que los colores cambien solos, despacio.

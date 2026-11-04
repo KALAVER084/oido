@@ -188,8 +188,17 @@
   @media (hover: hover) {
     .controles button:hover { color: var(--acento); }
     .controles #btn-letra:hover { color: var(--acento); }
+    .controles #btn-karaoke:hover { color: var(--acento); }
     .controles #btn-compartir-oido:hover { color: var(--acento); }
   }
+  /* Botón de karaoke: a la izquierda del de letra (o en la esquina si no hay letra) */
+  .controles #btn-karaoke {
+    position: absolute; right: 3rem; top: 50%; transform: translateY(-50%);
+    width: 2.8rem; height: 2.8rem; color: var(--suave);
+  }
+  .controles #btn-karaoke.activo { color: var(--acento); }
+  .controles #btn-letra[hidden] + #btn-karaoke { right: 0; }
+  @media (max-width: 380px) { .controles { gap: 1.1rem; } }   /* teléfonos angostos: caben los dos botones de la derecha */
   #play { width: 3.3rem; height: 3.3rem; background: var(--acento); color: var(--fondo); }
   #play:hover { color: var(--fondo); filter: brightness(1.08); }
 </style>
@@ -284,6 +293,7 @@
       <button id="play" data-t-aria="reproducir"></button>
       <button id="sig" data-t-aria="siguiente"></button>
       <button id="btn-letra" hidden data-t-aria="letra"></button>
+      <button id="btn-karaoke" hidden></button>
       <button id="btn-compartir-oido" data-t-aria="compartirOido" data-t-title="compartirOido"></button>
     </div>
   </div>
@@ -435,6 +445,7 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
+    modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente', salirKaraoke: 'Salir del karaoke',
     buscarEnYoutube: 'Buscar en YouTube', buscar: 'Buscar', cambiarTema: 'Cambiar tema', tema: 'Tema', tonoTema: 'Tono del tema', tono: 'Tono {n}',
     listo: 'Listo', dinamico: 'Dinámico', dinamicoTitulo: 'Los colores cambian solos, despacio', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartir Oído', anterior: 'Anterior', siguiente: 'Siguiente', reproducir: 'Reproducir', pausar: 'Pausar', posicion: 'Posición', letra: 'Letra',
@@ -471,6 +482,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
+    modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen', salirKaraoke: 'Exit karaoke',
     buscarEnYoutube: 'Search YouTube', buscar: 'Search', cambiarTema: 'Change theme', tema: 'Theme', tonoTema: 'Theme hue', tono: 'Hue {n}',
     listo: 'Done', dinamico: 'Dynamic', dinamicoTitulo: 'Colors change on their own, slowly', idioma: 'Language', automatico: 'Automatic',
     compartirOido: 'Share Oído', anterior: 'Previous', siguiente: 'Next', reproducir: 'Play', pausar: 'Pause', posicion: 'Position', letra: 'Lyrics',
@@ -507,6 +519,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
+    modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente', salirKaraoke: 'Sair do karaokê',
     buscarEnYoutube: 'Pesquisar no YouTube', buscar: 'Pesquisar', cambiarTema: 'Mudar tema', tema: 'Tema', tonoTema: 'Tom do tema', tono: 'Tom {n}',
     listo: 'Pronto', dinamico: 'Dinâmico', dinamicoTitulo: 'As cores mudam sozinhas, devagar', idioma: 'Idioma', automatico: 'Automático',
     compartirOido: 'Compartilhar o Oído', anterior: 'Anterior', siguiente: 'Próxima', reproducir: 'Tocar', pausar: 'Pausar', posicion: 'Posição', letra: 'Letra',
@@ -543,6 +556,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
+    modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance', salirKaraoke: 'Quitter le karaoké',
     buscarEnYoutube: 'Rechercher sur YouTube', buscar: 'Rechercher', cambiarTema: 'Changer de thème', tema: 'Thème', tonoTema: 'Teinte du thème', tono: 'Teinte {n}',
     listo: 'OK', dinamico: 'Dynamique', dinamicoTitulo: 'Les couleurs changent toutes seules, lentement', idioma: 'Langue', automatico: 'Automatique',
     compartirOido: 'Partager Oído', anterior: 'Précédent', siguiente: 'Suivant', reproducir: 'Lire', pausar: 'Pause', posicion: 'Position', letra: 'Paroles',
@@ -579,6 +593,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
+    modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm', salirKaraoke: 'Karaoke beenden',
     buscarEnYoutube: 'Auf YouTube suchen', buscar: 'Suchen', cambiarTema: 'Design ändern', tema: 'Design', tonoTema: 'Farbton des Designs', tono: 'Farbton {n}',
     listo: 'Fertig', dinamico: 'Dynamisch', dinamicoTitulo: 'Die Farben ändern sich langsam von selbst', idioma: 'Sprache', automatico: 'Automatisch',
     compartirOido: 'Oído teilen', anterior: 'Zurück', siguiente: 'Weiter', reproducir: 'Abspielen', pausar: 'Pause', posicion: 'Position', letra: 'Songtext',
@@ -615,6 +630,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
+    modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面', salirKaraoke: 'カラオケを終了',
     buscarEnYoutube: 'YouTube を検索', buscar: '検索', cambiarTema: 'テーマを変更', tema: 'テーマ', tonoTema: 'テーマの色合い', tono: '色合い {n}',
     listo: '完了', dinamico: 'ダイナミック', dinamicoTitulo: '色がゆっくり自動で変わります', idioma: '言語', automatico: '自動',
     compartirOido: 'Oído を共有', anterior: '前へ', siguiente: '次へ', reproducir: '再生', pausar: '一時停止', posicion: '再生位置', letra: '歌詞',
@@ -683,6 +699,8 @@ function traducirPagina() {
 }
 
 const ICONOS = {
+  microfono: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>',
+  ondas: '<path d="M2 12c2-4 3.5-4 5 0s3 4 5 0 3.5-4 5 0 3 4 5 0"/><path d="M2 17c2-2.5 3.5-2.5 5 0s3 2.5 5 0 3.5-2.5 5 0 3 2.5 5 0" opacity=".5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
@@ -1162,6 +1180,7 @@ window.__restaurar = c => {
 
 // Botón "atrás" de Android
 window.__atras = () => {
+  if (karaokeLocalActivo) { window.__salirKaraoke(); return true; }
   if (menu.classList.contains('abierto')) { cerrarMenu(); return true; }
   if (sincronizando || ajustandoFino) { sincronizando = false; ajustandoFino = false; pintarLetra(); return true; }
   if (pantallaLetra) { cerrarPantallaLetra(); return true; }
@@ -1414,6 +1433,7 @@ function pintarLetra() {
   if (est === 'sinc') { const l = lineaActual; lineaActual = -2; moverLetra(null, l); }
   avisarLetraCompleta();
   actualizarKaraokeLocal();
+  pintarBotonKaraoke();
   karaokeCancion();
 }
 
@@ -1623,7 +1643,8 @@ function datosKaraoke() {
     canal: it ? it.canal : '',
     letra: l ? { estado: l.estado, lineas: l.lineas, texto: l.texto } : null,
     tema: colores(tonoActual),
-    textos: { fija: t('karaokeFija') },
+    vivo: !!(it && it.vivo),
+    textos: { fija: t('karaokeFija'), vivo: t('enVivo'), salir: t('salirKaraoke') },
   };
 }
 // El karaoke (en la tele o encima de la app) lo muestra Android con su propia pantalla
@@ -1636,15 +1657,45 @@ function karaokeCancion() {
   if (hayKaraoke()) enviarKaraoke(datosKaraoke());
 }
 // Teléfono en horizontal + letra a pantalla completa = modo karaoke (solo Android)
+// Botón de karaoke: lo abre directo (el teléfono gira solo a horizontal).
+// Tras salir con × o "atrás", girar no lo vuelve a abrir hasta que el teléfono vuelva a vertical.
+let karaokeForzado = false, salidaManual = false;
 function actualizarKaraokeLocal() {
+  if (!horizontal.matches) salidaManual = false;
   // Con una tele conectada el karaoke va en la tele: el teléfono sigue siendo el control
-  const activo = esAndroid && pantallaLetra && horizontal.matches && !pantallaExterna;
+  const activo = esAndroid && !pantallaExterna && (karaokeForzado || (pantallaLetra && horizontal.matches && !salidaManual));
+  pintarBotonKaraoke();
   if (activo === karaokeLocalActivo) return;
   karaokeLocalActivo = activo;
+  pintarBotonKaraoke();
   document.body.classList.toggle('karaoke', activo);
   window.oido.karaokeLocal(activo);   // al estar lista avisa con __karaokeListo y se le manda la canción
 }
 window.__karaokeListo = () => enviarKaraoke(datosKaraoke());
+window.__salirKaraoke = () => {
+  karaokeForzado = false;
+  salidaManual = horizontal.matches;
+  if (esAndroid && window.OidoNativo.orientacionKaraoke) window.OidoNativo.orientacionKaraoke(false);
+  actualizarKaraokeLocal();
+};
+// El botón cambia según la canción: micrófono con letra, ondas sin letra (o en vivo)
+function pintarBotonKaraoke() {
+  const b = $('#btn-karaoke');
+  const it = cola && cola.items[cola.i];
+  const conLetra = !!(letra && (letra.estado === 'sinc' || letra.estado === 'fija'));
+  b.hidden = !it || (esAndroid && pantallaExterna) || !window.oido.karaokeLocal;
+  b.innerHTML = icono(conLetra ? 'microfono' : 'ondas', 24);
+  const txt = conLetra ? t('modoKaraoke') : t('pantallaAmbiente');
+  b.title = txt; b.setAttribute('aria-label', txt);
+  b.classList.toggle('activo', karaokeLocalActivo);
+}
+$('#btn-karaoke').onclick = () => {
+  if (!esAndroid) { window.oido.karaokeLocal(!karaokeLocalActivo); return; }   // PC: como F11
+  if (karaokeLocalActivo) { window.__salirKaraoke(); return; }
+  karaokeForzado = true;
+  if (window.OidoNativo.orientacionKaraoke) window.OidoNativo.orientacionKaraoke(true);
+  actualizarKaraokeLocal();
+};
 
 // PC: F11 abre o cierra el karaoke (segundo monitor si hay; si no, la misma pantalla)
 if (!esAndroid && window.oido.alKaraoke) {
@@ -1653,8 +1704,8 @@ if (!esAndroid && window.oido.alKaraoke) {
     e.preventDefault();
     window.oido.karaokeLocal(!karaokeLocalActivo);
   });
-  window.oido.alKaraoke('karaoke-abierto', () => { karaokeLocalActivo = true; enviarKaraoke(datosKaraoke()); });
-  window.oido.alKaraoke('karaoke-cerrado', () => { karaokeLocalActivo = false; });
+  window.oido.alKaraoke('karaoke-abierto', () => { karaokeLocalActivo = true; enviarKaraoke(datosKaraoke()); pintarBotonKaraoke(); });
+  window.oido.alKaraoke('karaoke-cerrado', () => { karaokeLocalActivo = false; pintarBotonKaraoke(); });
   $('#pista-karaoke').hidden = false;
 }
 // Con la letra completa abierta el teléfono puede girar y la pantalla no se apaga
@@ -1666,6 +1717,7 @@ function avisarLetraCompleta() {
 horizontal.addEventListener('change', actualizarKaraokeLocal);
 window.__pantallaExterna = conectada => {
   pantallaExterna = conectada;
+  if (conectada && karaokeForzado) { window.__salirKaraoke(); return enviarKaraoke(datosKaraoke()); }   // pasa a la tele; el teléfono se libera
   actualizarKaraokeLocal();
   if (conectada) enviarKaraoke(datosKaraoke());
 };

@@ -2,6 +2,7 @@ package hn.oido
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -13,13 +14,17 @@ import java.io.ByteArrayInputStream
  * y encima de la app cuando giras el teléfono con la letra abierta.
  */
 @SuppressLint("SetJavaScriptEnabled")
-class VistaKaraoke(contexto: Context, private val alListo: () -> Unit) {
+class VistaKaraoke(contexto: Context, private val alListo: () -> Unit, private val alSalir: (() -> Unit)? = null) {
     val web = WebView(contexto)
     private var listo = false
 
     init {
         web.setBackgroundColor(0xFF0E1615.toInt())
         web.settings.javaScriptEnabled = true
+        // La × del karaoke (solo en el teléfono; en la tele nadie toca la pantalla)
+        if (alSalir != null) web.addJavascriptInterface(object {
+            @JavascriptInterface fun salir() { web.post { alSalir?.invoke() } }
+        }, "OidoKaraoke")
         web.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
             // Solo archivos de la propia app; nada de internet
