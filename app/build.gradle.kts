@@ -5,7 +5,7 @@ plugins {
 
 // Cambia este número para actualizar NewPipe Extractor cuando YouTube cambie algo:
 // https://github.com/TeamNewPipe/NewPipeExtractor/releases
-val versionExtractor = "v0.26.5"
+val versionExtractor = "v0.27.1"
 
 android {
     namespace = "hn.oido"

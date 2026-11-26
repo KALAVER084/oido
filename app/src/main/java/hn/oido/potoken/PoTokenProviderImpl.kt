@@ -20,10 +20,8 @@ object PoTokenProviderImpl : PoTokenProvider {
     private var webPoTokenStreamingPot: String? = null
     private var webPoTokenGenerator: PoTokenGenerator? = null
 
-    // La versión v0.26.5 del extractor también pide estos clientes; no usan poToken.
-    override fun getWebEmbedClientPoToken(videoId: String): PoTokenResult? = null
-    override fun getAndroidClientPoToken(videoId: String): PoTokenResult? = null
-    override fun getIosClientPoToken(videoId: String): PoTokenResult? = null
+    // Desde NewPipe Extractor v0.27.0 solo se pide el poToken del cliente web
+    // (los de Android, iOS y web embebido se eliminaron porque YouTube ya no permite generarlos).
 
     override fun getWebClientPoToken(videoId: String): PoTokenResult? {
         if (!webViewSupported || webViewBadImpl) {

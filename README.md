@@ -10,6 +10,8 @@
 
 <p align="center">
   <a href="https://github.com/KALAVER084/oido/releases/latest"><b>⬇️ Descargar la última versión (APK)</b></a>
+  <br>
+  <a href="INSTALAR.md"><b>📲 Cómo instalarlo (paso único de Android)</b></a>
 </p>
 
 ---

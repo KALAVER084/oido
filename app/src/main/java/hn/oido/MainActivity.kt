@@ -327,6 +327,7 @@ class MainActivity : ComponentActivity() {
             .put("dur", if (c.duration == C.TIME_UNSET) 0 else c.duration)
             .put("error", c.playerError != null)
             .put("vivo", c.isCurrentMediaItemLive)
+            .put("volumenDb", Extractor.volumenDe(c.currentMediaItem?.mediaId) ?: JSONObject.NULL)
         js("window.__estado && window.__estado($estado)")
     }
 

@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - "README.md"
       - "MANTENIMIENTO.md"
+      - "INSTALAR.md"
       - "logo.png"
       - "LICENSE"
       - "capturas/**"

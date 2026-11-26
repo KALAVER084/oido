@@ -107,7 +107,10 @@ object Extractor {
         cacheAudio[id]?.let { (a, cuando) ->
             if (System.currentTimeMillis() - cuando < VIDA_URL_MS) return a
         }
-        val info = StreamInfo.getInfo(yt, "https://www.youtube.com/watch?v=$id")
+        // Igual que StreamInfo.getInfo(yt, url), pero conservando el extractor para leer el volumen
+        val extractor = yt.getStreamExtractor("https://www.youtube.com/watch?v=$id")
+        val info = StreamInfo.getInfo(extractor)
+        leerVolumen(extractor)?.let { volumenes[id] = it }
         val resultado = if (esVivo(info.streamType)) {
             // En vivo: audio y video vienen juntos en HLS; la calidad se elige en el reproductor
             Audio(info.hlsUrl?.takeIf { it.isNotEmpty() }
@@ -128,4 +131,38 @@ object Extractor {
     }
 
     fun olvidarAudio(id: String) { cacheAudio.remove(id) }
+
+    // ---------- Volumen que calculó YouTube (para normalizar más adelante) ----------
+    private val volumenes = java.util.concurrent.ConcurrentHashMap<String, Double>()
+
+    /** dB respecto a la referencia de YouTube: +4 = 4 dB más fuerte; −3 = 3 dB más bajo. null si no se pudo leer. */
+    fun volumenDe(id: String?): Double? = id?.let { volumenes[it] }
+
+    /** NewPipe no entrega este dato: se lee de la respuesta original de YouTube, que guarda en campos privados.
+     *  Si NewPipe cambia por dentro, simplemente no hay valor (la canción carga igual). */
+    private fun leerVolumen(extractor: Any): Double? = try {
+        val respuestas = mutableListOf<Any?>()
+        var clase: Class<*>? = extractor.javaClass
+        while (clase != null) {
+            for (campo in clase.declaredFields)
+                if (campo.name == "playerResponse" || campo.name.endsWith("StreamingData")) { campo.isAccessible = true; respuestas.add(campo.get(extractor)) }
+            clase = clase.superclass
+        }
+        // Primero el valor general de la canción; si no está, el de los formatos de audio
+        respuestas.firstNotNullOfOrNull { volumenGeneral(it) } ?: respuestas.firstNotNullOfOrNull { buscarVolumen(it, 0) }
+    } catch (e: Throwable) { null }
+
+    private fun volumenGeneral(respuesta: Any?): Double? {
+        val config = ((respuesta as? Map<*, *>)?.get("playerConfig") as? Map<*, *>)?.get("audioConfig") as? Map<*, *> ?: return null
+        return (config["loudnessDb"] as? Number)?.toDouble()
+    }
+
+    private fun buscarVolumen(nodo: Any?, prof: Int): Double? {
+        if (nodo == null || prof > 8) return null
+        if (nodo is Map<*, *>) {
+            (nodo["loudnessDb"] as? Number)?.let { return it.toDouble() }
+            for (v in nodo.values) buscarVolumen(v, prof + 1)?.let { return it }
+        } else if (nodo is List<*>) for (v in nodo) buscarVolumen(v, prof + 1)?.let { return it }
+        return null
+    }
 }

@@ -420,10 +420,10 @@ const Fondo = (() => {
     const cx = W / 2, cy = H / 2, rot = t * .02, L = lotes(), D = diagonal();
     for (let k = -5; k < 4; k++) {
       const g = base * Math.pow(2, k + fase); if (g < 4 * u || g > D * 2.2) continue;
-      const a = Math.min(1, (g - 4 * u) / (30 * u)) * Math.min(1, (D * 2.2 - g) / (D * .9)), q = Math.min(1, g / (D * .6)), clave = Math.round(a * 8) * 10 + Math.round(q * 6);
+      const a = Math.min(1, (g - 4 * u) / (18 * u)) * Math.min(1, (D * 2.2 - g) / (D * .9)), q = Math.min(1, g / (D * .6)), clave = Math.round(a * 8) * 10 + Math.round(q * 6);
       for (const ang of familias) { const an = ang + rot, dx = Math.cos(an), dy = Math.sin(an), nx = -dy, ny = dx, n = Math.ceil(D / g); for (let m = -n; m <= n; m++) { const ox = cx + nx * m * g, oy = cy + ny * m * g; L.tramo(clave, ox - dx * D, oy - dy * D, ox + dx * D, oy + dy * D); } }
     }
-    L.dibujar(k => { const a = Math.floor(k / 10) / 8, q = (k % 10) / 6; x.lineWidth = Math.max(1, u * (.4 + q * .9)); x.strokeStyle = c(HUE + q * 50, 60, 38 + q * 38, a * (.3 + q * .55)); });
+    L.dibujar(k => { const a = Math.floor(k / 10) / 8, q = (k % 10) / 6; x.lineWidth = Math.max(1, u * (.4 + q * .9)); x.strokeStyle = c(HUE + q * 50, 60, 45 + q * 30, a * (.5 + q * .4)); });
   }
   // Árbol infinito: viaje hacia la punta de la rama izquierda (cada rama es un árbol completo)
   function arbolInfinito(r, th, th2, vel, pantallaY = .5) {
@@ -490,7 +490,7 @@ const Fondo = (() => {
       const mx = (x1 + x2) / 2 - dy / 2 * sg, my = (y1 + y2) / 2 + dx / 2 * sg; seg(x1, y1, mx, my, 1); seg(mx, my, x2, y2, -1);
     };
     seg(ax, ay, bx, by, 1); seg(ax, ay, 2 * ax - bx, 2 * ay - by, 1);
-    L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.7 + (1 - q) * .6)); x.strokeStyle = c(HUE + 30 + q * 30, 65, 70 - q * 28, .85 - q * .45); });
+    L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u); x.strokeStyle = c(HUE + 30 + q * 30, 65, 66, .8); });   // mismo brillo hasta el borde
   }
 
   // Túnel de marcos (esquinas redondeadas)
@@ -1107,7 +1107,7 @@ const Fondo = (() => {
           koch(ax, ay, ...p1); koch(...p1, ...pk); koch(...pk, ...p2); koch(...p2, bx, by);
         };
         koch(cx, cy, cx + X, cy); koch(cx, cy, cx - X, cy);
-        L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.6 + q * .9)); x.strokeStyle = c(HUE + 30 - q * 20, 65, 70 - q * 25, .85 - q * .4); });
+        L.dibujar(k => { const q = k / 8; x.lineWidth = Math.max(1, u * (.6 + q * .9)); x.strokeStyle = c(HUE + 30 - q * 20, 65, 66, .8); });   // mismo brillo hasta el borde
       } },
     { // 69. Árbol infinito: viajas hacia la punta de un árbol que nunca se acaba
       peso: 2,
