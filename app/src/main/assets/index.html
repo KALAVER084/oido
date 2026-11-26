@@ -42,11 +42,7 @@
     display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
     background: var(--tinte); color: var(--texto); border-radius: 12px; padding: .6rem .8rem; margin-bottom: .8rem; font-size: .9rem;
   }
-  #actualizacion[hidden], #aviso-instalacion[hidden] { display: none; }
-  #aviso-instalacion { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; background: var(--tinte); color: var(--texto);
-    border-radius: 12px; padding: .6rem .8rem; margin-bottom: .8rem; font-size: .9rem; border-left: 3px solid var(--acento); }
-  #aviso-instalacion span { flex: 1; min-width: 12rem; }
-  #aviso-instalacion .descargar { background: var(--acento); color: var(--fondo); font-weight: 600; padding: .4rem .8rem; border-radius: 8px; }
+  #actualizacion[hidden] { display: none; }
   #actualizacion span { flex: 1; min-width: 12rem; }
   #actualizacion .descargar { background: var(--acento); color: var(--fondo); font-weight: 600; padding: .4rem .8rem; border-radius: 8px; }
   #actualizacion .cerrar { color: var(--suave); padding: .4rem .5rem; }
@@ -211,12 +207,6 @@
 <body>
 <header>
   <div class="ancho">
-    <div id="aviso-instalacion" hidden>
-      <span data-t="avisoInstalacion">Importante: desde enero, Android pide un paso único para instalar y actualizar Oído. Hazlo con tiempo (hay que esperar 24 horas).</span>
-      <button type="button" class="descargar" data-t="verGuia">Ver la guía</button>
-      <button type="button" class="hecho" data-t="yaLoHice">Ya lo hice</button>
-      <button type="button" class="cerrar" data-t="despues">Después</button>
-    </div>
     <div id="actualizacion" hidden>
       <span></span>
       <button type="button" class="descargar" data-t="descargar">Descargar</button>
@@ -458,7 +448,6 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
-    avisoInstalacion: 'Importante: desde enero, Android pide un paso único para instalar y actualizar Oído. Hazlo con tiempo (hay que esperar 24 horas).', verGuia: 'Ver la guía', yaLoHice: 'Ya lo hice', despues: 'Después',
     volumenYT: 'Volumen YouTube: {v} dB', volumenSinDato: 'Volumen YouTube: sin dato',
     modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente',
     ocultarLetra: 'Apagar letras', mostrarLetraOculta: 'Encender letras', letraOcultaAviso: 'Letras apagadas. Toca el botón de letra para volver a encenderlas.', ocultarLetraCorto: 'Apagar letras', mostrarLetraCorto: 'Encender letras',
@@ -499,7 +488,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
-    avisoInstalacion: 'Important: starting in January, Android requires a one-time step to install and update Oído. Do it ahead of time (there is a 24-hour wait).', verGuia: 'See the guide', yaLoHice: 'Done', despues: 'Later',
     volumenYT: 'YouTube loudness: {v} dB', volumenSinDato: 'YouTube loudness: no data',
     modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen',
     ocultarLetra: 'Turn lyrics off', mostrarLetraOculta: 'Turn lyrics on', letraOcultaAviso: 'Lyrics off. Tap the lyrics button to turn them back on.', ocultarLetraCorto: 'Lyrics off', mostrarLetraCorto: 'Lyrics on',
@@ -540,7 +528,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
-    avisoInstalacion: 'Importante: a partir de janeiro, o Android exige um passo único para instalar e atualizar o Oído. Faça com antecedência (é preciso esperar 24 horas).', verGuia: 'Ver o guia', yaLoHice: 'Já fiz', despues: 'Depois',
     volumenYT: 'Volume YouTube: {v} dB', volumenSinDato: 'Volume YouTube: sem dado',
     modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente',
     ocultarLetra: 'Desligar letras', mostrarLetraOculta: 'Ligar letras', letraOcultaAviso: 'Letras desligadas. Toque no botão de letra para ligá-las de novo.', ocultarLetraCorto: 'Desligar letras', mostrarLetraCorto: 'Ligar letras',
@@ -581,7 +568,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
-    avisoInstalacion: 'Important : dès janvier, Android exige une étape unique pour installer et mettre à jour Oído. Faites-la à l’avance (il faut attendre 24 heures).', verGuia: 'Voir le guide', yaLoHice: 'C’est fait', despues: 'Plus tard',
     volumenYT: 'Volume YouTube : {v} dB', volumenSinDato: 'Volume YouTube : aucune donnée',
     modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance',
     ocultarLetra: 'Désactiver les paroles', mostrarLetraOculta: 'Activer les paroles', letraOcultaAviso: 'Paroles désactivées. Touchez le bouton des paroles pour les réactiver.', ocultarLetraCorto: 'Désactiver les paroles', mostrarLetraCorto: 'Activer les paroles',
@@ -622,7 +608,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
-    avisoInstalacion: 'Wichtig: Ab Januar verlangt Android einen einmaligen Schritt, um Oído zu installieren und zu aktualisieren. Erledige ihn rechtzeitig (24 Stunden Wartezeit).', verGuia: 'Anleitung ansehen', yaLoHice: 'Erledigt', despues: 'Später',
     volumenYT: 'YouTube-Lautheit: {v} dB', volumenSinDato: 'YouTube-Lautheit: keine Daten',
     modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm',
     ocultarLetra: 'Liedtexte ausschalten', mostrarLetraOculta: 'Liedtexte einschalten', letraOcultaAviso: 'Liedtexte ausgeschaltet. Tippe auf die Liedtext-Taste, um sie wieder einzuschalten.', ocultarLetraCorto: 'Liedtexte aus', mostrarLetraCorto: 'Liedtexte an',
@@ -663,7 +648,6 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
-    avisoInstalacion: '重要：1月から、Oído のインストールと更新に Android で一度だけの手順が必要になります。早めに済ませてください（24時間の待ち時間があります）。', verGuia: 'ガイドを見る', yaLoHice: '完了', despues: 'あとで',
     volumenYT: 'YouTube音量：{v} dB', volumenSinDato: 'YouTube音量：データなし',
     modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面',
     ocultarLetra: '歌詞をオフ', mostrarLetraOculta: '歌詞をオン', letraOcultaAviso: '歌詞をオフにしました。歌詞ボタンを押すと再びオンにできます。', ocultarLetraCorto: '歌詞をオフ', mostrarLetraCorto: '歌詞をオン',
@@ -1241,20 +1225,6 @@ $('#play').onclick = () => reproductor.alternar();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenu(); });
 
 // ---------- Aviso de versión nueva (Android) ----------
-// Aviso para hacer el paso único de Android (solo en Android, hasta que lo hagas o veas la guía)
-const GUIA_INSTALAR = 'https://github.com/KALAVER084/oido/blob/HEAD/INSTALAR.md';
-(function avisoInstalacion() {
-  if (!window.OidoNativo) return;                 // solo en Android (aquí aún no existe la variable esAndroid)
-  let estado = null; try { estado = localStorage.getItem('oido-aviso-instalacion'); } catch {}
-  if (estado === 'hecho' || estado === 'visto') return;
-  const a = $('#aviso-instalacion');
-  const guardar = v => { try { localStorage.setItem('oido-aviso-instalacion', v); } catch {} a.hidden = true; };
-  a.querySelector('.descargar').onclick = () => { window.oido.abrirEnlace(GUIA_INSTALAR); guardar('visto'); };
-  a.querySelector('.hecho').onclick = () => guardar('hecho');
-  a.querySelector('.cerrar').onclick = () => { a.hidden = true; };          // después: vuelve a aparecer al abrir Oído
-  a.hidden = false;
-})();
-
 window.__actualizacion = ({ version, url }) => {
   const a = $('#actualizacion');
   a.querySelector('span').textContent = t('versionNueva', { v: version });
