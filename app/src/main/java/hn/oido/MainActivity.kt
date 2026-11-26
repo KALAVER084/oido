@@ -328,6 +328,7 @@ class MainActivity : ComponentActivity() {
             .put("error", c.playerError != null)
             .put("vivo", c.isCurrentMediaItemLive)
             .put("volumenDb", Extractor.volumenDe(c.currentMediaItem?.mediaId) ?: JSONObject.NULL)
+            .put("bajadaDb", Extractor.bajadaDe(c.currentMediaItem?.mediaId))
         js("window.__estado && window.__estado($estado)")
     }
 

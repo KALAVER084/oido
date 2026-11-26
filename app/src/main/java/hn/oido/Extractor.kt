@@ -138,6 +138,14 @@ object Extractor {
     /** dB respecto a la referencia de YouTube: +4 = 4 dB más fuerte; −3 = 3 dB más bajo. null si no se pudo leer. */
     fun volumenDe(id: String?): Double? = id?.let { volumenes[it] }
 
+    /** Emparejar volumen (opción B): solo se bajan las canciones que pasan de +3 dB, hasta ese nivel.
+     *  Las demás quedan igual (subir las suaves necesitaría un efecto aparte). Sin dato: no se toca. */
+    private const val LIMITE_DB = 3.0
+    fun bajadaDe(id: String?): Double {
+        val v = volumenDe(id) ?: return 0.0
+        return if (v > LIMITE_DB) v - LIMITE_DB else 0.0
+    }
+
     /** NewPipe no entrega este dato: se lee de la respuesta original de YouTube, que guarda en campos privados.
      *  Si NewPipe cambia por dentro, simplemente no hay valor (la canción carga igual). */
     private fun leerVolumen(extractor: Any): Double? = try {

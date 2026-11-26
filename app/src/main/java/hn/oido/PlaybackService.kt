@@ -87,6 +87,12 @@ class PlaybackService : MediaSessionService() {
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 reintentados.retainAll(setOfNotNull(mediaItem?.mediaId))
+                aplicarVolumen(player)
+            }
+
+            // Al quedar lista la canción ya se conoce su volumen (se lee al pedir el audio)
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) aplicarVolumen(player)
             }
         })
 
@@ -114,6 +120,13 @@ class PlaybackService : MediaSessionService() {
                 )
             })
             .build()
+    }
+
+    /** Empareja el volumen: baja las canciones que suenan muy fuerte, según el valor que calculó YouTube.
+     *  Es el volumen interno del reproductor (no toca el volumen del teléfono). */
+    private fun aplicarVolumen(player: Player) {
+        val bajada = Extractor.bajadaDe(player.currentMediaItem?.mediaId)
+        player.volume = Math.pow(10.0, -bajada / 20.0).toFloat().coerceIn(0.1f, 1f)
     }
 
     private fun resolver(spec: DataSpec): DataSpec {

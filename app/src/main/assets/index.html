@@ -448,6 +448,7 @@ if (window.OidoNativo) {
 const IDIOMAS = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français', de: 'Deutsch', ja: '日本語' };
 const TEXTOS = {
   es: {
+    volumenBajado: 'Volumen YouTube: {v} dB (bajado {b} dB)',
     volumenYT: 'Volumen YouTube: {v} dB', volumenSinDato: 'Volumen YouTube: sin dato',
     modoKaraoke: 'Modo karaoke', pantallaAmbiente: 'Pantalla de ambiente',
     ocultarLetra: 'Apagar letras', mostrarLetraOculta: 'Encender letras', letraOcultaAviso: 'Letras apagadas. Toca el botón de letra para volver a encenderlas.', ocultarLetraCorto: 'Apagar letras', mostrarLetraCorto: 'Encender letras',
@@ -488,6 +489,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Enlace de Oído copiado', noCopiar: 'No se pudo copiar', karaokeFija: 'Letra sin sincronizar',
   },
   en: {
+    volumenBajado: 'YouTube loudness: {v} dB (lowered {b} dB)',
     volumenYT: 'YouTube loudness: {v} dB', volumenSinDato: 'YouTube loudness: no data',
     modoKaraoke: 'Karaoke mode', pantallaAmbiente: 'Ambient screen',
     ocultarLetra: 'Turn lyrics off', mostrarLetraOculta: 'Turn lyrics on', letraOcultaAviso: 'Lyrics off. Tap the lyrics button to turn them back on.', ocultarLetraCorto: 'Lyrics off', mostrarLetraCorto: 'Lyrics on',
@@ -528,6 +530,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído link copied', noCopiar: "Couldn't copy", karaokeFija: 'Lyrics not synced',
   },
   pt: {
+    volumenBajado: 'Volume YouTube: {v} dB (reduzido {b} dB)',
     volumenYT: 'Volume YouTube: {v} dB', volumenSinDato: 'Volume YouTube: sem dado',
     modoKaraoke: 'Modo karaokê', pantallaAmbiente: 'Tela ambiente',
     ocultarLetra: 'Desligar letras', mostrarLetraOculta: 'Ligar letras', letraOcultaAviso: 'Letras desligadas. Toque no botão de letra para ligá-las de novo.', ocultarLetraCorto: 'Desligar letras', mostrarLetraCorto: 'Ligar letras',
@@ -568,6 +571,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Link do Oído copiado', noCopiar: 'Não foi possível copiar', karaokeFija: 'Letra não sincronizada',
   },
   fr: {
+    volumenBajado: 'Volume YouTube : {v} dB (baissé de {b} dB)',
     volumenYT: 'Volume YouTube : {v} dB', volumenSinDato: 'Volume YouTube : aucune donnée',
     modoKaraoke: 'Mode karaoké', pantallaAmbiente: 'Écran d’ambiance',
     ocultarLetra: 'Désactiver les paroles', mostrarLetraOculta: 'Activer les paroles', letraOcultaAviso: 'Paroles désactivées. Touchez le bouton des paroles pour les réactiver.', ocultarLetraCorto: 'Désactiver les paroles', mostrarLetraCorto: 'Activer les paroles',
@@ -608,6 +612,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Lien d’Oído copié', noCopiar: 'Copie impossible', karaokeFija: 'Paroles non synchronisées',
   },
   de: {
+    volumenBajado: 'YouTube-Lautheit: {v} dB (um {b} dB gesenkt)',
     volumenYT: 'YouTube-Lautheit: {v} dB', volumenSinDato: 'YouTube-Lautheit: keine Daten',
     modoKaraoke: 'Karaoke-Modus', pantallaAmbiente: 'Stimmungsbildschirm',
     ocultarLetra: 'Liedtexte ausschalten', mostrarLetraOculta: 'Liedtexte einschalten', letraOcultaAviso: 'Liedtexte ausgeschaltet. Tippe auf die Liedtext-Taste, um sie wieder einzuschalten.', ocultarLetraCorto: 'Liedtexte aus', mostrarLetraCorto: 'Liedtexte an',
@@ -648,6 +653,7 @@ const TEXTOS = {
     enlaceOidoCopiado: 'Oído-Link kopiert', noCopiar: 'Kopieren nicht möglich', karaokeFija: 'Songtext nicht synchronisiert',
   },
   ja: {
+    volumenBajado: 'YouTube音量：{v} dB（{b} dB 下げました）',
     volumenYT: 'YouTube音量：{v} dB', volumenSinDato: 'YouTube音量：データなし',
     modoKaraoke: 'カラオケモード', pantallaAmbiente: 'アンビエント画面',
     ocultarLetra: '歌詞をオフ', mostrarLetraOculta: '歌詞をオン', letraOcultaAviso: '歌詞をオフにしました。歌詞ボタンを押すと再びオンにできます。', ocultarLetraCorto: '歌詞をオフ', mostrarLetraCorto: '歌詞をオン',
@@ -1168,11 +1174,16 @@ barra.addEventListener('input', () => { arrastrando = true; $('#t-pos').textCont
 barra.addEventListener('change', () => { reproductor.irA(+barra.value); arrastrando = false; });
 
 // Android avisa el estado del reproductor varias veces por segundo
-// Volumen que calculó YouTube para la canción (por ahora solo se muestra; el sonido no cambia)
+// Volumen que calculó YouTube para la canción (en Android, las muy fuertes se bajan para emparejarlas)
 function textoVolumen(s) {
   if (s.vivo || s.error || s.cargando) return '';
   if (typeof s.volumenDb !== 'number') return ' · ' + t('volumenSinDato');
   const v = s.volumenDb.toLocaleString(idioma, { maximumFractionDigits: 1, minimumFractionDigits: 1, signDisplay: 'exceptZero' });
+  // Android empareja el volumen: si bajó la canción, se muestra cuánto
+  if (typeof s.bajadaDb === 'number' && s.bajadaDb >= .05) {
+    const b = s.bajadaDb.toLocaleString(idioma, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+    return ' · ' + t('volumenBajado', { v, b });
+  }
   return ' · ' + t('volumenYT', { v });
 }
 window.__estado = s => {
